@@ -1,0 +1,43 @@
+[
+  {
+    "id": "base2-3d-test",
+    "filename": "base2-3d-test.json",
+    "metadata": {
+      "name": "3D Base 2 Cube",
+      "difficulty": "Hard",
+      "base": 2,
+      "dimension": 3,
+      "author": "Dynamic Engine"
+    }
+  },
+  {
+    "id": "base2-test",
+    "filename": "base2-test.json",
+    "metadata": {
+      "name": "Shi-Doku Base 2",
+      "difficulty": "Easy",
+      "base": 2,
+      "author": "Dynamic Engine"
+    }
+  },
+  {
+    "id": "base4-test",
+    "filename": "base4-test.json",
+    "metadata": {
+      "name": "Hexadecimal Base 4",
+      "difficulty": "Medium",
+      "base": 4,
+      "author": "Dynamic Engine"
+    }
+  },
+  {
+    "id": "easy-1",
+    "filename": "easy-1.json",
+    "metadata": {
+      "name": "Easy Base 3",
+      "difficulty": "Easy",
+      "base": 3,
+      "author": "Classic"
+    }
+  }
+]

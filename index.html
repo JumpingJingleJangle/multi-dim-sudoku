@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Dimensional Sudoku</title>
+    <meta name="description" content="Play 2D and 3D multi-dimensional Sudoku puzzles offline in your browser.">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon.png" type="image/png">
+    <meta name="theme-color" content="#6366f1">
+
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MultiSudoku">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo-wrapper">
+                <img src="icon.png" alt="MultiSudoku Logo" class="logo-img">
+                <h1 class="app-title">Multi-Dimensional Sudoku</h1>
+            </div>
+            <div class="controls-top">
+                <div class="select-wrapper">
+                    <select id="puzzle-select" aria-label="Select Puzzle"></select>
+                </div>
+                <button id="btn-load" class="btn btn-secondary">Load</button>
+                <button id="btn-save" class="btn btn-secondary">Save</button>
+                <button id="btn-upload" class="btn btn-secondary">Upload File</button>
+                <input type="file" id="puzzle-upload" style="display: none;" accept=".json">
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="center-stage">
+                <div id="dim-controls" class="dim-controls" style="display: none;">
+                    <div class="plane-shift">
+                        <button id="btn-shift-down" class="btn">&larr; Back Layer</button>
+                        <span id="layer-label">Z: 0</span>
+                        <button id="btn-shift-up" class="btn">Fwd Layer &rarr;</button>
+                    </div>
+                    <div class="pivot-controls">
+                        <button id="btn-pivot-xy" class="btn active" data-axis="XY">XY Plane</button>
+                        <button id="btn-pivot-xz" class="btn" data-axis="XZ">XZ Plane</button>
+                        <button id="btn-pivot-yz" class="btn" data-axis="YZ">YZ Plane</button>
+                    </div>
+                </div>
+
+                <div class="board-container">
+                    <div id="sudoku-board"></div>
+                    <div id="auxiliary-box" style="display: none;">
+                        <h3 class="aux-title">Active Box Context</h3>
+                        <div id="aux-grids-container"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="mode-toggle">
+                    <label class="mode-label">Mode:</label>
+                    <div class="mode-btn-group">
+                        <button id="btn-entry" class="btn-mode active">Entry <span class="kbd">E</span></button>
+                        <button id="btn-notation" class="btn-mode">Notation <span class="kbd">N</span></button>
+                    </div>
+                    <div id="notation-color-controls" class="color-selectors" style="display: none;">
+                        <button id="btn-note-green" class="color-btn green active" title="Mark digits as potentially valid (Green)">Valid <span class="kbd">V</span></button>
+                        <button id="btn-note-red" class="color-btn red" title="Mark digits as invalid/excluded (Red)">Invalid <span class="kbd">I</span></button>
+                    </div>
+                    <div class="identify-hold-control">
+                        <button id="btn-hold-highlight" class="btn" title="Lock the current identification highlight">Hold <span class="kbd">H</span></button>
+                        <span id="hold-label" style="display: none;"></span>
+                    </div>
+                </div>
+                
+                <div class="history-controls">
+                    <button id="btn-undo" class="btn" disabled>Undo <span class="kbd">Z</span></button>
+                    <button id="btn-redo" class="btn" disabled>Redo <span class="kbd">Y</span></button>
+                </div>
+
+                <div class="numpad" id="numpad">
+                    <button class="num-btn" data-val="1">1</button>
+                    <button class="num-btn" data-val="2">2</button>
+                    <button class="num-btn" data-val="3">3</button>
+                    <button class="num-btn" data-val="4">4</button>
+                    <button class="num-btn" data-val="5">5</button>
+                    <button class="num-btn" data-val="6">6</button>
+                    <button class="num-btn" data-val="7">7</button>
+                    <button class="num-btn" data-val="8">8</button>
+                    <button class="num-btn" data-val="9">9</button>
+                    <button class="num-btn clear-btn" data-val="0">C</button>
+                    <button class="num-btn enter-btn" data-val="enter">Enter</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -459,6 +459,31 @@ def generate_sudoku(base, dimension, output_file=None, force=False, progress=Fal
         json.dump([puzzle], f, indent=2)
         
     print(f"Configuration locked and structured securely to isolated JSON: '{output_file}'.")
+    update_puzzles_index()
+
+def update_puzzles_index(puzzles_dir='puzzles'):
+    if not os.path.exists(puzzles_dir):
+        return
+    summary = []
+    for filename in sorted(os.listdir(puzzles_dir)):
+        if filename.endswith('.json') and filename != 'puzzles.json':
+            filepath = os.path.join(puzzles_dir, filename)
+            try:
+                with open(filepath, 'r') as f:
+                    p = json.load(f)
+                    if isinstance(p, list) and len(p) > 0:
+                        p = p[0]
+                    summary.append({
+                        'id': p.get('id', filename.replace('.json', '')),
+                        'filename': filename,
+                        'metadata': p.get('metadata', {})
+                    })
+            except Exception:
+                pass
+    index_path = os.path.join(puzzles_dir, 'puzzles.json')
+    with open(index_path, 'w') as f:
+        json.dump(summary, f, indent=2)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Generalized Sudoku Exact Cover Generator Tool")
