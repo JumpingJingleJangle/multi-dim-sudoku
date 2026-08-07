@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beautiful Sudoku</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Sudoku</h1>
+            <div class="controls-top">
+                <select id="puzzle-select"></select>
+                <button id="btn-load">Load</button>
+                <button id="btn-save">Save</button>
+                <button id="btn-upload">Upload File</button>
+                <input type="file" id="puzzle-upload" style="display: none;" accept=".json">
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="center-stage">
+                <div id="dim-controls" class="dim-controls" style="display: none;">
+                    <div class="plane-shift">
+                        <button id="btn-shift-down" class="btn">&larr; Back Layer</button>
+                        <span id="layer-label">Z: 0</span>
+                        <button id="btn-shift-up" class="btn">Fwd Layer &rarr;</button>
+                    </div>
+                    <div class="pivot-controls">
+                        <button id="btn-pivot-xy" class="btn active" data-axis="XY">XY Plane</button>
+                        <button id="btn-pivot-xz" class="btn" data-axis="XZ">XZ Plane</button>
+                        <button id="btn-pivot-yz" class="btn" data-axis="YZ">YZ Plane</button>
+                    </div>
+                </div>
+
+                <div class="board-container">
+                    <div id="sudoku-board"></div>
+                    <div id="auxiliary-box" style="display: none;">
+                        <h3 class="aux-title">Active Box Context</h3>
+                        <div id="aux-grids-container"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="mode-toggle">
+                <label>Mode:</label>
+                <button id="btn-entry" class="active">Entry <span class="kbd">E</span></button>
+                <button id="btn-notation">Notation <span class="kbd">N</span></button>
+                <div id="notation-color-controls" class="color-selectors" style="display: none;">
+                    <button id="btn-note-green" class="color-btn green active" title="Mark digits as potentially valid (Green)">Valid <span class="kbd">V</span></button>
+                    <button id="btn-note-red" class="color-btn red" title="Mark digits as invalid/excluded (Red)">Invalid <span class="kbd">I</span></button>
+                </div>
+                <div class="identify-hold-control">
+                    <button id="btn-hold-highlight" class="btn" title="Lock the current identification highlight">Hold <span class="kbd">H</span></button>
+                    <span id="hold-label" style="display: none; font-size: 0.8rem; color: var(--identify-shadow); font-weight: bold;"></span>
+                </div>
+            </div>
+                
+                <div class="history-controls">
+                    <button id="btn-undo" disabled>Undo <span class="kbd">Z</span></button>
+                    <button id="btn-redo" disabled>Redo <span class="kbd">Y</span></button>
+                </div>
+
+                <div class="numpad" id="numpad">
+                    <button class="num-btn" data-val="1">1</button>
+                    <button class="num-btn" data-val="2">2</button>
+                    <button class="num-btn" data-val="3">3</button>
+                    <button class="num-btn" data-val="4">4</button>
+                    <button class="num-btn" data-val="5">5</button>
+                    <button class="num-btn" data-val="6">6</button>
+                    <button class="num-btn" data-val="7">7</button>
+                    <button class="num-btn" data-val="8">8</button>
+                    <button class="num-btn" data-val="9">9</button>
+                    <button class="num-btn clear-btn" data-val="0">C</button>
+                    <button class="num-btn enter-btn" data-val="enter">Enter</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>

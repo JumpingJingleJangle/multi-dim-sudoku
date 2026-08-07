@@ -1,0 +1,41 @@
+{
+  "id": "base2-test",
+  "metadata": {
+    "name": "Shi-Doku Base 2",
+    "difficulty": "Easy",
+    "base": 2,
+    "author": "Dynamic Engine"
+  },
+  "initial_state": [
+    {
+      "x": 0,
+      "y": 0,
+      "value": 1
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "value": 2
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "value": 2
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "value": 4
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "value": 4
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "value": 1
+    }
+  ]
+}

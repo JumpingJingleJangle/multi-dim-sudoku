@@ -1,0 +1,60 @@
+{
+  "id": "base2-3d-test",
+  "metadata": {
+    "name": "3D Base 2 Cube",
+    "difficulty": "Hard",
+    "base": 2,
+    "dimension": 3,
+    "author": "Dynamic Engine"
+  },
+  "initial_state": [
+    {
+      "z": 0,
+      "y": 0,
+      "x": 0,
+      "value": 1
+    },
+    {
+      "z": 0,
+      "y": 0,
+      "x": 1,
+      "value": 2
+    },
+    {
+      "z": 0,
+      "y": 1,
+      "x": 0,
+      "value": 3
+    },
+    {
+      "z": 1,
+      "y": 0,
+      "x": 0,
+      "value": 4
+    },
+    {
+      "z": 1,
+      "y": 1,
+      "x": 1,
+      "value": 5
+    },
+    {
+      "z": 2,
+      "y": 2,
+      "x": 2,
+      "value": 6
+    },
+    {
+      "z": 3,
+      "y": 3,
+      "x": 3,
+      "value": 7
+    },
+    {
+      "z": 7,
+      "y": 7,
+      "x": 7,
+      "value": 8
+    }
+  ]
+}
