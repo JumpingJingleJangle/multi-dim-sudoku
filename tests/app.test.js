@@ -1,5 +1,7 @@
 import assert from 'assert';
 import { test, describe } from 'node:test';
+import fs from 'fs';
+import path from 'path';
 import { SudokuGame } from '../js/game.js';
 import { UIState } from '../js/state.js';
 import { formatDigit, parseDigit } from '../js/utils.js';
@@ -134,5 +136,31 @@ describe('UIState Model Tests', () => {
 
         state.shiftSlice(1, 8);
         assert.strictEqual(state.currentSlice, 5);
+    });
+});
+
+describe('PWA & Service Worker Precache Integrity Tests', () => {
+    test('Service Worker precache assets list integrity', () => {
+        const swPath = path.resolve(process.cwd(), 'sw.js');
+        assert.ok(fs.existsSync(swPath), 'sw.js MUST exist');
+
+        const swContent = fs.readFileSync(swPath, 'utf8');
+        assert.ok(swContent.includes("CACHE_NAME = 'multi-dim-sudoku-v1'"), 'Cache name MUST be multi-dim-sudoku-v1');
+
+        const match = swContent.match(/ASSETS_TO_CACHE\s*=\s*\[([\s\S]*?)\];/);
+        assert.ok(match, 'sw.js MUST contain ASSETS_TO_CACHE array');
+
+        const assetPaths = match[1]
+            .split(',')
+            .map(s => s.trim().replace(/^['"]|['"]$/g, ''))
+            .filter(Boolean);
+
+        assert.ok(assetPaths.includes('./js/generator/generator-core.js'), 'generator-core.js MUST be precached in sw.js');
+
+        for (const relativePath of assetPaths) {
+            if (relativePath === './') continue;
+            const fullPath = path.resolve(process.cwd(), relativePath.replace(/^\.\//, ''));
+            assert.ok(fs.existsSync(fullPath), `Precached asset file MUST exist: ${relativePath}`);
+        }
     });
 });

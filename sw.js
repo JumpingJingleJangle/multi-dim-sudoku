@@ -9,6 +9,7 @@ const ASSETS_TO_CACHE = [
   "./js/ui.js",
   "./js/utils.js",
   "./js/generator/dlx-solver.js",
+  "./js/generator/generator-core.js",
   "./js/generator/generator-worker.js",
   "./manifest.json",
   "./icon.png",
