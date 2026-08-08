@@ -149,56 +149,34 @@ export class SudokuApp {
             if (!isInteractive) this.selectCell(null, null, null);
         });
 
-        if (this.ui.btnEntry) this.ui.btnEntry.addEventListener("click", () => this.setMode('entry'));
-        if (this.ui.btnNotation) this.ui.btnNotation.addEventListener("click", () => this.setMode('notation'));
-        if (this.ui.btnNoteGreen) this.ui.btnNoteGreen.addEventListener("click", () => this.setNotationColor('green'));
-        if (this.ui.btnNoteRed) this.ui.btnNoteRed.addEventListener("click", () => this.setNotationColor('red'));
-        if (this.ui.btnHoldHighlight) this.ui.btnHoldHighlight.addEventListener("click", () => this.toggleHoldHighlight());
+        this.ui.bindClick("btnEntry", () => this.setMode('entry'));
+        this.ui.bindClick("btnNotation", () => this.setMode('notation'));
+        this.ui.bindClick("btnNoteGreen", () => this.setNotationColor('green'));
+        this.ui.bindClick("btnNoteRed", () => this.setNotationColor('red'));
+        this.ui.bindClick("btnHoldHighlight", () => this.toggleHoldHighlight());
 
-        const btnShiftUp = document.getElementById("btn-shift-up");
-        if (btnShiftUp) btnShiftUp.addEventListener("click", () => this.shiftSlice(1));
-        const btnShiftDown = document.getElementById("btn-shift-down");
-        if (btnShiftDown) btnShiftDown.addEventListener("click", () => this.shiftSlice(-1));
-        const btnPivotXY = document.getElementById("btn-pivot-xy");
-        if (btnPivotXY) btnPivotXY.addEventListener("click", () => this.pivotAxis('XY'));
-        const btnPivotXZ = document.getElementById("btn-pivot-xz");
-        if (btnPivotXZ) btnPivotXZ.addEventListener("click", () => this.pivotAxis('XZ'));
-        const btnPivotYZ = document.getElementById("btn-pivot-yz");
-        if (btnPivotYZ) btnPivotYZ.addEventListener("click", () => this.pivotAxis('YZ'));
+        this.ui.bindClick("btnShiftUp", () => this.shiftSlice(1));
+        this.ui.bindClick("btnShiftDown", () => this.shiftSlice(-1));
+        this.ui.bindClick("btnPivotXY", () => this.pivotAxis('XY'));
+        this.ui.bindClick("btnPivotXZ", () => this.pivotAxis('XZ'));
+        this.ui.bindClick("btnPivotYZ", () => this.pivotAxis('YZ'));
 
-        if (this.ui.btnUndo) this.ui.btnUndo.addEventListener("click", () => this.undo());
-        if (this.ui.btnRedo) this.ui.btnRedo.addEventListener("click", () => this.redo());
+        this.ui.bindClick("btnUndo", () => this.undo());
+        this.ui.bindClick("btnRedo", () => this.redo());
+        this.ui.bindClick("btnSave", () => this.savePuzzle());
+        
+        this.ui.bindClick("btnUpload", () => {
+            if (this.ui.elements.puzzleUpload) this.ui.elements.puzzleUpload.click();
+        });
 
-        const btnSave = document.getElementById("btn-save");
-        if (btnSave) btnSave.addEventListener("click", () => this.savePuzzle());
-
-        const btnUpload = document.getElementById("btn-upload");
-        if (btnUpload) {
-            btnUpload.addEventListener("click", () => {
-                const fileInput = document.getElementById("puzzle-upload");
-                if (fileInput) fileInput.click();
-            });
-        }
-
-        const fileInput = document.getElementById("puzzle-upload");
-        if (fileInput) fileInput.addEventListener("change", (e) => this.handleFileUpload(e));
-
-        const btnOpenGen = document.getElementById("btn-generate-open");
-        if (btnOpenGen) {
-            btnOpenGen.addEventListener("click", () => this.showGeneratorModal());
-        }
+        this.ui.bindChange("puzzleUpload", (e) => this.handleFileUpload(e));
+        this.ui.bindClick("btnGenerateOpen", () => this.showGeneratorModal());
     }
 
     setupModalListeners() {
-        const modal = document.getElementById("generator-modal");
-        const btnClose = document.getElementById("btn-close-generate");
-        const btnCancel = document.getElementById("btn-cancel-generate");
-        const genForm = document.getElementById("generator-form");
-        const presetEl = document.getElementById("gen-preset");
-        const diffEl = document.getElementById("gen-difficulty");
-
-        if (btnClose) btnClose.onclick = () => this.hideGeneratorModal();
-        if (btnCancel) btnCancel.onclick = () => this.hideGeneratorModal();
+        const modal = this.ui.elements.generatorModal;
+        this.ui.bindClick("btnCloseGenerate", () => this.hideGeneratorModal());
+        this.ui.bindClick("btnCancelGenerate", () => this.hideGeneratorModal());
 
         if (modal) {
             modal.onclick = (e) => {
@@ -206,34 +184,34 @@ export class SudokuApp {
             };
         }
 
-        if (presetEl) presetEl.addEventListener("change", () => this.updateGeneratorCalibration());
-        if (diffEl) diffEl.addEventListener("change", () => this.updateGeneratorCalibration());
+        this.ui.bindChange("genPreset", () => this.updateGeneratorCalibration());
+        this.ui.bindChange("genDifficulty", () => this.updateGeneratorCalibration());
 
-        if (genForm) {
-            genForm.onsubmit = (e) => {
-                e.preventDefault();
-                const presetVal = presetEl ? presetEl.value : "3x2";
-                const [base, dim] = presetVal.split("x").map(Number);
+        this.ui.bindSubmit("generatorForm", (e) => {
+            e.preventDefault();
+            const presetEl = this.ui.elements.genPreset;
+            const presetVal = presetEl ? presetEl.value : "3x2";
+            const [base, dim] = presetVal.split("x").map(Number);
 
-                const strategyEl = document.getElementById("gen-dig-strategy");
-                const strategy = strategyEl ? strategyEl.value : "weighted";
-                const difficulty = diffEl ? diffEl.value : "medium";
-                const nameInput = document.getElementById("gen-name");
-                const name = nameInput ? nameInput.value : "Custom Generated Puzzle";
-                const removalsInput = document.getElementById("gen-removals-input");
-                const removals = removalsInput ? parseInt(removalsInput.value) : undefined;
+            const strategyEl = this.ui.elements.genDigStrategy;
+            const strategy = strategyEl ? strategyEl.value : "weighted";
+            const diffEl = this.ui.elements.genDifficulty;
+            const difficulty = diffEl ? diffEl.value : "medium";
+            const nameInput = this.ui.elements.genName;
+            const name = nameInput ? nameInput.value : "Custom Generated Puzzle";
+            const removalsInput = this.ui.elements.genRemovalsInput;
+            const removals = removalsInput ? parseInt(removalsInput.value) : undefined;
 
-                this.requestPuzzleGeneration(base, dim, strategy, difficulty, name, removals);
-            };
-        }
+            this.requestPuzzleGeneration(base, dim, strategy, difficulty, name, removals);
+        });
     }
 
     updateGeneratorCalibration() {
-        const presetEl = document.getElementById("gen-preset");
-        const diffEl = document.getElementById("gen-difficulty");
-        const removalsInput = document.getElementById("gen-removals-input");
-        const removalsHint = document.getElementById("gen-removals-hint");
-        const strategyEl = document.getElementById("gen-dig-strategy");
+        const presetEl = this.ui.elements.genPreset;
+        const diffEl = this.ui.elements.genDifficulty;
+        const removalsInput = this.ui.elements.genRemovalsInput;
+        const removalsHint = this.ui.elements.genRemovalsHint;
+        const strategyEl = this.ui.elements.genDigStrategy;
 
         if (!presetEl || !diffEl || !removalsInput) return;
 
@@ -285,27 +263,27 @@ export class SudokuApp {
     }
 
     showGeneratorModal() {
-        const modal = document.getElementById("generator-modal");
+        const modal = this.ui.elements.generatorModal;
         if (modal) {
             modal.style.display = "flex";
-            const formContainer = document.getElementById("generator-form");
+            const formContainer = this.ui.elements.generatorForm;
             if (formContainer) {
                 formContainer.style.display = "block";
                 formContainer.querySelectorAll(".input-group, .advanced-panel, .modal-actions").forEach(el => el.style.display = "");
             }
-            const progressContainer = document.getElementById("gen-progress-wrapper");
+            const progressContainer = this.ui.elements.genProgressWrapper;
             if (progressContainer) progressContainer.style.display = "none";
             this.updateGeneratorCalibration();
         }
     }
 
     hideGeneratorModal() {
-        const modal = document.getElementById("generator-modal");
+        const modal = this.ui.elements.generatorModal;
         if (modal) modal.style.display = "none";
     }
 
     updateGeneratorStatus(msg) {
-        const statusEl = document.getElementById("gen-progress-text");
+        const statusEl = this.ui.elements.genProgressText;
         if (statusEl) statusEl.innerText = msg;
     }
 
@@ -315,12 +293,12 @@ export class SudokuApp {
             return;
         }
 
-        const formContainer = document.getElementById("generator-form");
+        const formContainer = this.ui.elements.generatorForm;
         if (formContainer) {
             formContainer.style.display = "block";
             formContainer.querySelectorAll(".input-group, .advanced-panel, .modal-actions").forEach(el => el.style.display = "none");
         }
-        const progressContainer = document.getElementById("gen-progress-wrapper");
+        const progressContainer = this.ui.elements.genProgressWrapper;
         if (progressContainer) progressContainer.style.display = "flex";
         this.updateGeneratorStatus("Initializing solver engine...");
 

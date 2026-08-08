@@ -8,21 +8,84 @@ import { formatDigit } from './utils.js';
 
 export class SudokuUI {
     constructor() {
-        this.boardEl = document.getElementById("sudoku-board");
-        this.auxContainer = document.getElementById("aux-grids-container");
-        this.auxBox = document.getElementById("auxiliary-box");
-        this.dimControls = document.getElementById("dim-controls");
-        this.layerLabel = document.getElementById("layer-label");
-        this.holdLabel = document.getElementById("hold-label");
-        this.btnHoldHighlight = document.getElementById("btn-hold-highlight");
-        this.selectEl = document.getElementById("puzzle-select");
-        this.btnUndo = document.getElementById("btn-undo");
-        this.btnRedo = document.getElementById("btn-redo");
-        this.btnEntry = document.getElementById("btn-entry");
-        this.btnNotation = document.getElementById("btn-notation");
-        this.noteColorControls = document.getElementById("notation-color-controls");
-        this.btnNoteGreen = document.getElementById("btn-note-green");
-        this.btnNoteRed = document.getElementById("btn-note-red");
+        this.elements = {
+            // Board & Auxiliary Display
+            board: document.getElementById("sudoku-board"),
+            auxContainer: document.getElementById("aux-grids-container"),
+            auxBox: document.getElementById("auxiliary-box"),
+            dimControls: document.getElementById("dim-controls"),
+            layerLabel: document.getElementById("layer-label"),
+            holdLabel: document.getElementById("hold-label"),
+            
+            // Mode & History Controls
+            btnEntry: document.getElementById("btn-entry"),
+            btnNotation: document.getElementById("btn-notation"),
+            btnHoldHighlight: document.getElementById("btn-hold-highlight"),
+            btnNoteGreen: document.getElementById("btn-note-green"),
+            btnNoteRed: document.getElementById("btn-note-red"),
+            noteColorControls: document.getElementById("notation-color-controls"),
+            btnUndo: document.getElementById("btn-undo"),
+            btnRedo: document.getElementById("btn-redo"),
+            selectPuzzle: document.getElementById("puzzle-select"),
+            btnLoad: document.getElementById("btn-load"),
+            btnSave: document.getElementById("btn-save"),
+            btnUpload: document.getElementById("btn-upload"),
+            puzzleUpload: document.getElementById("puzzle-upload"),
+            
+            // 3D Slicing & Pivot Controls
+            btnShiftUp: document.getElementById("btn-shift-up"),
+            btnShiftDown: document.getElementById("btn-shift-down"),
+            btnPivotXY: document.getElementById("btn-pivot-xy"),
+            btnPivotXZ: document.getElementById("btn-pivot-xz"),
+            btnPivotYZ: document.getElementById("btn-pivot-yz"),
+            
+            // Generator Modal Controls
+            btnGenerateOpen: document.getElementById("btn-generate-open"),
+            btnCloseGenerate: document.getElementById("btn-close-generate"),
+            btnCancelGenerate: document.getElementById("btn-cancel-generate"),
+            generatorModal: document.getElementById("generator-modal"),
+            generatorForm: document.getElementById("generator-form"),
+            genPreset: document.getElementById("gen-preset"),
+            genDifficulty: document.getElementById("gen-difficulty"),
+            genName: document.getElementById("gen-name"),
+            genRemovalsInput: document.getElementById("gen-removals-input"),
+            genRemovalsHint: document.getElementById("gen-removals-hint"),
+            genDigStrategy: document.getElementById("gen-dig-strategy"),
+            genProgressWrapper: document.getElementById("gen-progress-wrapper"),
+            genProgressText: document.getElementById("gen-progress-text")
+        };
+
+        // Legacy properties pointing to elements dictionary for backwards compatibility
+        this.boardEl = this.elements.board;
+        this.auxContainer = this.elements.auxContainer;
+        this.auxBox = this.elements.auxBox;
+        this.dimControls = this.elements.dimControls;
+        this.layerLabel = this.elements.layerLabel;
+        this.holdLabel = this.elements.holdLabel;
+        this.btnHoldHighlight = this.elements.btnHoldHighlight;
+        this.selectEl = this.elements.selectPuzzle;
+        this.btnUndo = this.elements.btnUndo;
+        this.btnRedo = this.elements.btnRedo;
+        this.btnEntry = this.elements.btnEntry;
+        this.btnNotation = this.elements.btnNotation;
+        this.noteColorControls = this.elements.noteColorControls;
+        this.btnNoteGreen = this.elements.btnNoteGreen;
+        this.btnNoteRed = this.elements.btnNoteRed;
+    }
+
+    bindClick(key, handler) {
+        const el = this.elements[key];
+        if (el) el.addEventListener("click", handler);
+    }
+
+    bindChange(key, handler) {
+        const el = this.elements[key];
+        if (el) el.addEventListener("change", handler);
+    }
+
+    bindSubmit(key, handler) {
+        const el = this.elements[key];
+        if (el) el.addEventListener("submit", handler);
     }
 
     renderBoard(game, currentAxis, currentSlice, selectedCell, onCellClick) {
@@ -385,9 +448,11 @@ export class SudokuUI {
         }
 
         if (onLoad) {
-            document.getElementById("btn-load").onclick = () => {
-                onLoad(this.selectEl.value);
-            };
+            if (this.elements.btnLoad) {
+                this.elements.btnLoad.onclick = () => {
+                    onLoad(this.selectEl.value);
+                };
+            }
         }
     }
 }
