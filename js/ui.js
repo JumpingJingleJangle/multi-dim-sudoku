@@ -16,7 +16,7 @@ export class SudokuUI {
             dimControls: document.getElementById("dim-controls"),
             layerLabel: document.getElementById("layer-label"),
             holdLabel: document.getElementById("hold-label"),
-            
+
             // Mode & History Controls
             btnEntry: document.getElementById("btn-entry"),
             btnNotation: document.getElementById("btn-notation"),
@@ -31,14 +31,14 @@ export class SudokuUI {
             btnSave: document.getElementById("btn-save"),
             btnUpload: document.getElementById("btn-upload"),
             puzzleUpload: document.getElementById("puzzle-upload"),
-            
+
             // 3D Slicing & Pivot Controls
             btnShiftUp: document.getElementById("btn-shift-up"),
             btnShiftDown: document.getElementById("btn-shift-down"),
             btnPivotXY: document.getElementById("btn-pivot-xy"),
             btnPivotXZ: document.getElementById("btn-pivot-xz"),
             btnPivotYZ: document.getElementById("btn-pivot-yz"),
-            
+
             // Generator Modal Controls
             btnGenerateOpen: document.getElementById("btn-generate-open"),
             btnCloseGenerate: document.getElementById("btn-close-generate"),
@@ -324,7 +324,7 @@ export class SudokuUI {
             this.holdLabel.style.display = 'inline-block';
             this.holdLabel.innerText = (identifiedNumber !== null && identifiedNumber !== undefined)
                 ? `Holding: ${formatDigit(identifiedNumber)}`
-                : 'Holding (Select Cell/Number)';
+                : 'Holding:\n(Select Number)';
         } else {
             this.holdLabel.style.display = 'none';
         }

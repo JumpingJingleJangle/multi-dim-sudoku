@@ -8,6 +8,7 @@ import { SudokuGame } from './game.js';
 import { SudokuUI } from './ui.js';
 import { UIState } from './state.js';
 import { parseDigit } from './utils.js';
+import { generatePuzzle } from './generator/generator-core.js';
 
 export class SudokuApp {
     constructor() {
@@ -50,24 +51,20 @@ export class SudokuApp {
 
     setupWorker() {
         try {
+            if (typeof Worker === 'undefined') {
+                this.worker = null;
+                return;
+            }
             this.worker = new Worker('./js/generator/generator-worker.js', { type: 'module' });
             this.worker.onmessage = (e) => {
                 const { type, status, puzzle, message } = e.data;
                 if (type === 'STATUS') {
                     this.updateGeneratorStatus(message);
                 } else if (type === 'RESULT') {
-                    this.hideGeneratorModal();
                     if (status === 'SUCCESS' && puzzle) {
-                        this.generatedPuzzles.unshift(puzzle);
-                        this.showToast(`✨ Successfully generated ${puzzle.metadata.name}!`);
-                        this.ui.populatePuzzleList(
-                            this.bundledPuzzles,
-                            (val) => this.loadSelectedPuzzle(val),
-                            `gen:${puzzle.id}`,
-                            this.generatedPuzzles
-                        );
-                        this.initializePuzzle(puzzle);
+                        this.onGenerationSuccess(puzzle);
                     } else {
+                        this.hideGeneratorModal();
                         alert(`Generation Failed: ${message}`);
                     }
                 }
@@ -78,7 +75,7 @@ export class SudokuApp {
                 alert("Puzzle generation encountered a worker error.");
             };
         } catch (err) {
-            console.warn("Web Worker not supported or failed to load:", err);
+            this.worker = null;
         }
     }
 
@@ -306,12 +303,22 @@ export class SudokuApp {
         if (statusEl) statusEl.innerText = msg;
     }
 
-    requestPuzzleGeneration(base, dim, strategy, difficulty, name, removals) {
-        if (!this.worker) {
-            alert("Worker engine is not available in your browser.");
-            return;
+    onGenerationSuccess(puzzle) {
+        this.hideGeneratorModal();
+        if (puzzle) {
+            this.generatedPuzzles.unshift(puzzle);
+            this.showToast(`✨ Successfully generated ${puzzle.metadata.name}!`);
+            this.ui.populatePuzzleList(
+                this.bundledPuzzles,
+                (val) => this.loadSelectedPuzzle(val),
+                `gen:${puzzle.id}`,
+                this.generatedPuzzles
+            );
+            this.initializePuzzle(puzzle);
         }
+    }
 
+    requestPuzzleGeneration(base, dim, strategy, difficulty, name, removals) {
         const formContainer = this.ui.elements.generatorForm;
         if (formContainer) {
             formContainer.style.display = "block";
@@ -321,15 +328,30 @@ export class SudokuApp {
         if (progressContainer) progressContainer.style.display = "flex";
         this.updateGeneratorStatus("Initializing solver engine...");
 
-        this.worker.postMessage({
-            type: 'GENERATE',
-            base,
-            dim,
-            strategy,
-            difficulty,
-            name,
-            removals
-        });
+        if (this.worker) {
+            this.worker.postMessage({
+                type: 'GENERATE',
+                base,
+                dim,
+                strategy,
+                difficulty,
+                name,
+                removals
+            });
+        } else {
+            setTimeout(() => {
+                try {
+                    const puzzle = generatePuzzle(
+                        { base, dim, name, removals, strategy, difficulty },
+                        (msg) => this.updateGeneratorStatus(msg)
+                    );
+                    this.onGenerationSuccess(puzzle);
+                } catch (err) {
+                    this.hideGeneratorModal();
+                    alert(`Generation Failed: ${err.message}`);
+                }
+            }, 50);
+        }
     }
 
     showToast(message) {

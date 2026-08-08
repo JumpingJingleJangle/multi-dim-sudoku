@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { test, describe } from 'node:test';
-import { generateFullPuzzle, ConstraintSolver, processDigging } from '../js/generator/generator-worker.js';
+import { generateFullPuzzle, ConstraintSolver, processDigging, generatePuzzle } from '../js/generator/generator-core.js';
 
 describe('In-Browser Generator Engine Tests', () => {
     test('Generate 2x2 (Base 2 Dim 2) Full Solution', () => {
@@ -83,5 +83,22 @@ describe('In-Browser Generator Engine Tests', () => {
         const solver = new ConstraintSolver(stateMap, 2, 2);
         const res = solver.solve();
         assert.strictEqual(res.solvable, true, 'Max removal puzzle MUST be uniquely solvable');
+    });
+
+    test('Synchronous generatePuzzle API Entry Point', () => {
+        let statuses = [];
+        const puzzle = generatePuzzle({
+            base: 2,
+            dim: 2,
+            name: "API Test 2x2",
+            removals: 6,
+            difficulty: "medium"
+        }, (status) => statuses.push(status));
+
+        assert.ok(puzzle);
+        assert.strictEqual(puzzle.metadata.name, "API Test 2x2");
+        assert.strictEqual(statuses.length, 2);
+        assert.strictEqual(statuses[0], 'Generating solution matrix...');
+        assert.strictEqual(statuses[1], 'Digging clues for playable puzzle...');
     });
 });
