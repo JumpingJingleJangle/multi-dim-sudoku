@@ -7,7 +7,11 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && typeof w
     );
 
     if (isLocalhost) {
-        console.log('[Dev Mode] Bypassing Service Worker on localhost to allow instant reloads.');
+        if ('caches' in window) {
+            caches.keys().then((names) => {
+                for (let name of names) caches.delete(name);
+            });
+        }
         navigator.serviceWorker.getRegistrations().then((registrations) => {
             for (const registration of registrations) {
                 registration.unregister();
@@ -20,6 +24,24 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && typeof w
                 .catch(err => console.log('[Service Worker] Registration failed:', err));
         });
     }
+}
+
+
+function formatDigit(val) {
+    if (val === null || val === undefined) return "";
+    return String(val);
+}
+
+function parseDigit(str, base) {
+    if (str === null || str === undefined || str === '' || str === 'clear') return null;
+    if (base === 4) {
+        const hexChars = ['0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'];
+        if (typeof str === 'number' && hexChars[str] !== undefined) return hexChars[str];
+        const strVal = String(str).toUpperCase();
+        return hexChars.includes(strVal) ? strVal : null;
+    }
+    const num = parseInt(str);
+    return isNaN(num) ? null : num;
 }
 
 
@@ -56,16 +78,18 @@ class SudokuGame {
         this.ny = this.n;
         this.nx = this.n;
 
-        this.board = Array(this.nz).fill(null).map(() => Array(this.ny).fill(null).map(() => Array(this.nx).fill(0)));
-        this.initialBoard = Array(this.nz).fill(null).map(() => Array(this.ny).fill(null).map(() => Array(this.nx).fill(0)));
+        this.board = Array(this.nz).fill(null).map(() => Array(this.ny).fill(null).map(() => Array(this.nx).fill(null)));
+        this.initialBoard = Array(this.nz).fill(null).map(() => Array(this.ny).fill(null).map(() => Array(this.nx).fill(null)));
         this.notations = Array(this.nz).fill(null).map(() => Array(this.ny).fill(null).map(() => Array(this.nx).fill(null).map(() => ({ green: new Set(), red: new Set() }))));
 
         if (puzzle.initial_state) {
             puzzle.initial_state.forEach(cell => {
                 let z = cell.z || 0;
                 if (z < this.nz && cell.y < this.ny && cell.x < this.nx) {
-                    this.initialBoard[z][cell.y][cell.x] = cell.value;
-                    this.board[z][cell.y][cell.x] = cell.value;
+                    if (cell.value !== null && cell.value !== undefined) {
+                        this.initialBoard[z][cell.y][cell.x] = cell.value;
+                        this.board[z][cell.y][cell.x] = cell.value;
+                    }
                 }
             });
         }
@@ -92,7 +116,7 @@ class SudokuGame {
         const { z, y, x } = cmd;
         if (cmd.type === 'entry') {
             this.board[z][y][x] = cmd.val;
-            if (cmd.val !== 0) {
+            if (cmd.val !== null && cmd.val !== undefined) {
                 this.notations[z][y][x].green.clear();
                 this.notations[z][y][x].red.clear();
             } else {
@@ -103,7 +127,7 @@ class SudokuGame {
             if (cmd.added) this.notations[z][y][x][cmd.color].add(cmd.val);
             else this.notations[z][y][x][cmd.color].delete(cmd.val);
         } else if (cmd.type === 'clear_all') {
-            this.board[z][y][x] = 0;
+            this.board[z][y][x] = null;
             this.notations[z][y][x].green.clear();
             this.notations[z][y][x].red.clear();
         }
@@ -139,13 +163,14 @@ class SudokuGame {
     getConflicts() {
         let errors = new Set();
         let isFilled = true;
-        
+        const isEmpty = (v) => v === null || v === undefined;
+
         for (let z = 0; z < this.nz; z++) {
             for (let y = 0; y < this.ny; y++) {
                 let map = new Map();
                 for (let x = 0; x < this.nx; x++) {
                     let v = this.board[z][y][x];
-                    if (v === 0) isFilled = false;
+                    if (isEmpty(v)) isFilled = false;
                     else {
                         if (map.has(v)) {
                             errors.add(`${z},${y},${x}`);
@@ -155,13 +180,13 @@ class SudokuGame {
                 }
             }
         }
-        
+
         for (let z = 0; z < this.nz; z++) {
             for (let x = 0; x < this.nx; x++) {
                 let map = new Map();
                 for (let y = 0; y < this.ny; y++) {
                     let v = this.board[z][y][x];
-                    if (v !== 0) {
+                    if (!isEmpty(v)) {
                         if (map.has(v)) {
                             errors.add(`${z},${y},${x}`);
                             errors.add(`${z},${map.get(v)},${x}`);
@@ -170,13 +195,13 @@ class SudokuGame {
                 }
             }
         }
-        
+
         for (let y = 0; y < this.ny; y++) {
             for (let x = 0; x < this.nx; x++) {
                 let map = new Map();
                 for (let z = 0; z < this.nz; z++) {
                     let v = this.board[z][y][x];
-                    if (v !== 0) {
+                    if (!isEmpty(v)) {
                         if (map.has(v)) {
                             errors.add(`${z},${y},${x}`);
                             errors.add(`${map.get(v)},${y},${x}`);
@@ -203,11 +228,12 @@ class SudokuGame {
                                 let y = dyi * b + j;
                                 let x = dxi * b + k;
                                 let v = this.board[z][y][x];
-                                if (v !== 0) {
+                                if (!isEmpty(v)) {
                                     if (map.has(v)) {
                                         errors.add(`${z},${y},${x}`);
-                                        errors.add(map.get(v));
-                                    } else map.set(v, `${z},${y},${x}`);
+                                        const prevPos = map.get(v);
+                                        errors.add(`${prevPos.z},${prevPos.y},${prevPos.x}`);
+                                    } else map.set(v, { z, y, x });
                                 }
                             }
                         }
@@ -247,14 +273,14 @@ class SudokuUI {
             for (let c = 0; c < n; c++) {
                 const coords = this.map2Dto3D(r, c, game.dimension, currentAxis, currentSlice);
                 const { z, y, x } = coords;
-                
+
                 const cell = document.createElement("div");
                 cell.className = "cell";
                 cell.dataset.z = z;
                 cell.dataset.y = y;
                 cell.dataset.x = x;
-                
-                if (game.initialBoard[z][y][x] !== 0) cell.classList.add("fixed");
+
+                if (game.initialBoard[z][y][x] !== null && game.initialBoard[z][y][x] !== undefined) cell.classList.add("fixed");
                 if ((c + 1) % base === 0 && c !== n - 1) cell.classList.add("border-right-thick");
                 if ((r + 1) % base === 0 && r !== n - 1) cell.classList.add("border-bottom-thick");
 
@@ -269,7 +295,7 @@ class SudokuUI {
                     e.stopPropagation();
                     onCellClick(z, y, x);
                 });
-                
+
                 this.boardEl.appendChild(cell);
             }
         }
@@ -280,30 +306,33 @@ class SudokuUI {
         const initialVal = game.initialBoard[z][y][x];
         const val = game.board[z][y][x];
 
-        if (initialVal !== 0) {
-            cell.innerText = initialVal;
-        } else if (val !== 0) {
+        const isFixed = initialVal !== null && initialVal !== undefined;
+        const hasEntry = !isFixed && val !== null && val !== undefined;
+
+        if (isFixed) {
+            cell.innerText = formatDigit(initialVal);
+        } else if (hasEntry) {
             const entrySpan = document.createElement("span");
             entrySpan.className = "entry";
-            entrySpan.innerText = val;
+            entrySpan.innerText = formatDigit(val);
             cell.appendChild(entrySpan);
         } else {
             const notDiv = document.createElement("div");
             notDiv.className = "notations-list";
-            
-            const gNotes = Array.from(game.notations[z][y][x].green).sort((a, b) => a - b);
-            const rNotes = Array.from(game.notations[z][y][x].red).sort((a, b) => a - b);
+
+            const gNotes = Array.from(game.notations[z][y][x].green).sort();
+            const rNotes = Array.from(game.notations[z][y][x].red).sort();
 
             if (gNotes.length > 0) {
                 const gGroup = document.createElement("div");
                 gGroup.className = "note-group note-green";
-                gGroup.innerHTML = gNotes.map(n => `<span class="note-val" data-note="${n}">${n}</span>`).join(", ");
+                gGroup.innerHTML = gNotes.map(n => `<span class="note-val" data-note="${n}">${formatDigit(n)}</span>`).join(", ");
                 notDiv.appendChild(gGroup);
             }
             if (rNotes.length > 0) {
                 const rGroup = document.createElement("div");
                 rGroup.className = "note-group note-red";
-                rGroup.innerHTML = rNotes.map(n => `<span class="note-val" data-note="${n}">${n}</span>`).join(", ");
+                rGroup.innerHTML = rNotes.map(n => `<span class="note-val" data-note="${n}">${formatDigit(n)}</span>`).join(", ");
                 notDiv.appendChild(rGroup);
             }
             cell.appendChild(notDiv);
@@ -317,7 +346,7 @@ class SudokuUI {
 
     renderAuxiliaryBox(game, currentAxis, selectedCell) {
         this.auxContainer.innerHTML = "";
-        
+
         if (game.dimension === 2) {
             this.auxBox.style.display = 'none';
             return;
@@ -339,38 +368,43 @@ class SudokuUI {
         for (let layer = 0; layer < b; layer++) {
             const auxGrid = document.createElement("div");
             auxGrid.className = "aux-grid";
-            
+
             for (let r = 0; r < b; r++) {
                 for (let c = 0; c < b; c++) {
                     let z = 0, y = 0, x = 0;
                     if (currentAxis === 'XY') { z = boxZ + layer; y = boxY + r; x = boxX + c; }
                     else if (currentAxis === 'XZ') { y = boxY + layer; z = boxZ + r; x = boxX + c; }
                     else if (currentAxis === 'YZ') { x = boxX + layer; z = boxZ + r; y = boxY + c; }
-                    
+
                     const cell = document.createElement("div");
                     cell.className = "cell";
                     cell.dataset.z = z;
                     cell.dataset.y = y;
                     cell.dataset.x = x;
-                    
-                    if (game.initialBoard[z][y][x] !== 0) {
-                        cell.innerText = game.initialBoard[z][y][x];
+
+                    const initialVal = game.initialBoard[z][y][x];
+                    const val = game.board[z][y][x];
+                    const isFixed = initialVal !== null && initialVal !== undefined;
+                    const hasVal = !isFixed && val !== null && val !== undefined;
+
+                    if (isFixed) {
+                        cell.innerText = formatDigit(initialVal);
                         cell.classList.add('fixed');
-                    } else if (game.board[z][y][x] !== 0) {
-                        cell.innerText = game.board[z][y][x];
+                    } else if (hasVal) {
+                        cell.innerText = formatDigit(val);
                     } else if (game.notations[z][y][x].green.size > 0 || game.notations[z][y][x].red.size > 0) {
-                        const gNotes = Array.from(game.notations[z][y][x].green).sort((a, b) => a - b);
-                        const rNotes = Array.from(game.notations[z][y][x].red).sort((a, b) => a - b);
-                        
+                        const gNotes = Array.from(game.notations[z][y][x].green).sort();
+                        const rNotes = Array.from(game.notations[z][y][x].red).sort();
+
                         cell.style.display = "flex";
                         cell.style.flexDirection = "column";
                         cell.style.fontSize = "calc(var(--cell-size) * 0.15)";
                         cell.style.lineHeight = "1";
                         cell.style.justifyContent = "center";
-                        
+
                         let html = "";
-                        if (gNotes.length > 0) html += `<div style="color:var(--notation-green)">${gNotes.join(",")}</div>`;
-                        if (rNotes.length > 0) html += `<div style="color:var(--notation-red)">${rNotes.join(",")}</div>`;
+                        if (gNotes.length > 0) html += `<div style="color:var(--notation-green)">${gNotes.map(n => formatDigit(n)).join(",")}</div>`;
+                        if (rNotes.length > 0) html += `<div style="color:var(--notation-red)">${rNotes.map(n => formatDigit(n)).join(",")}</div>`;
                         cell.innerHTML = html;
                     }
 
@@ -383,7 +417,7 @@ class SudokuUI {
                     auxGrid.appendChild(cell);
                 }
             }
-            
+
             const wrapped = document.createElement("div");
             wrapped.className = "aux-layer-wrapper";
             wrapped.style.display = "flex";
@@ -391,7 +425,7 @@ class SudokuUI {
             wrapped.style.alignItems = "center";
             wrapped.style.gap = "5px";
             wrapped.appendChild(auxGrid);
-            
+
             let absoluteLayer = 0;
             if (currentAxis === 'XY') absoluteLayer = boxZ + layer;
             else if (currentAxis === 'XZ') absoluteLayer = boxY + layer;
@@ -420,10 +454,10 @@ class SudokuUI {
         }
         this.dimControls.style.display = 'flex';
         this.auxBox.style.display = 'flex';
-        
+
         const axisChar = axis === 'XY' ? 'Z' : (axis === 'XZ' ? 'Y' : 'X');
         this.layerLabel.innerText = `Layer ${slice} (${axisChar})`;
-        
+
         document.querySelectorAll(".pivot-controls .btn").forEach(btn => {
             btn.classList.toggle('active', btn.dataset.axis === axis);
         });
@@ -455,38 +489,95 @@ class SudokuUI {
         this.btnEntry.classList.toggle("active", mode === 'entry');
         this.btnNotation.classList.toggle("active", mode === 'notation');
         this.noteColorControls.style.display = (mode === 'notation') ? 'flex' : 'none';
-        
+
         this.btnNoteGreen.classList.toggle("active", color === 'green');
         this.btnNoteRed.classList.toggle("active", color === 'red');
     }
 
     updateHoldUI(isHold, identifiedNumber) {
         this.btnHoldHighlight.classList.toggle("active-hold", isHold);
-        if (isHold && identifiedNumber) {
-            this.holdLabel.innerText = `Holding: ${identifiedNumber}`;
+        if (isHold && identifiedNumber !== null && identifiedNumber !== undefined) {
+            this.holdLabel.innerText = `Holding: ${formatDigit(identifiedNumber)}`;
             this.holdLabel.style.display = 'inline';
         } else {
             this.holdLabel.style.display = 'none';
         }
     }
 
+    renderNumpad(game, onNumpadClick) {
+        const numpadEl = document.getElementById("numpad");
+        if (!numpadEl) return;
+        numpadEl.innerHTML = "";
+
+        const base = game.base;
+        const totalVals = game.n;
+
+        numpadEl.className = "numpad";
+        const vals = base === 4
+            ? ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
+            : Array.from({ length: totalVals }, (_, i) => i + 1);
+
+        if (base === 4) numpadEl.classList.add("numpad-hex");
+
+        for (let v of vals) {
+            const btn = document.createElement("button");
+            btn.className = "num-btn";
+            btn.dataset.val = v;
+            btn.innerText = v;
+            btn.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onNumpadClick(v);
+            });
+            numpadEl.appendChild(btn);
+        }
+
+        const clearBtn = document.createElement("button");
+        clearBtn.className = "num-btn clear-btn";
+        clearBtn.dataset.val = "clear";
+        clearBtn.innerText = "C";
+        clearBtn.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onNumpadClick("clear");
+        });
+        numpadEl.appendChild(clearBtn);
+
+        const enterBtn = document.createElement("button");
+        enterBtn.className = "num-btn enter-btn";
+        enterBtn.dataset.val = "enter";
+        enterBtn.innerText = "Enter";
+        enterBtn.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onNumpadClick("enter");
+        });
+        numpadEl.appendChild(enterBtn);
+    }
+
     updateHighlights(game, identifiedNumber) {
         document.querySelectorAll(".cell.identified").forEach(el => el.classList.remove("identified"));
         document.querySelectorAll(".note-val.identified-note").forEach(el => el.classList.remove("identified-note"));
         document.querySelectorAll(".cell.identified-aux-note").forEach(el => el.classList.remove("identified-aux-note"));
-        
-        if (!identifiedNumber) return;
-        
+
+        if (identifiedNumber === null || identifiedNumber === undefined) return;
+
         document.querySelectorAll(".cell").forEach(cell => {
             const z = parseInt(cell.dataset.z);
             const y = parseInt(cell.dataset.y);
             const x = parseInt(cell.dataset.x);
             if (isNaN(z) || isNaN(y) || isNaN(x)) return;
-            
-            const val = game.initialBoard[z][y][x] !== 0 ? game.initialBoard[z][y][x] : game.board[z][y][x];
-            if (val === identifiedNumber) {
+
+            const initialVal = game.initialBoard[z][y][x];
+            const boardVal = game.board[z][y][x];
+            const isFixed = initialVal !== null && initialVal !== undefined;
+            const hasVal = !isFixed && boardVal !== null && boardVal !== undefined;
+
+            const activeVal = isFixed ? initialVal : (hasVal ? boardVal : null);
+
+            if (activeVal !== null && String(activeVal) === String(identifiedNumber)) {
                 cell.classList.add("identified");
-            } else if (val === 0) {
+            } else if (activeVal === null) {
                 const hasNote = game.notations[z][y][x].green.has(identifiedNumber) || game.notations[z][y][x].red.has(identifiedNumber);
                 if (hasNote) {
                     const noteSpan = cell.querySelector(`.note-val[data-note="${identifiedNumber}"]`);
@@ -499,39 +590,65 @@ class SudokuUI {
         });
     }
 
-    populatePuzzleList(puzzles, onLoad) {
+
+    populatePuzzleList(bundledPuzzles, onLoad, selectedValue = null, generatedPuzzles = []) {
         this.selectEl.innerHTML = "";
-        puzzles.forEach(p => {
+
+        // 1. Dynamically Generated Puzzles
+        if (generatedPuzzles.length > 0) {
+            const genGroup = document.createElement("optgroup");
+            genGroup.label = "✨ Dynamically Generated";
+            generatedPuzzles.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = `gen:${p.id}`;
+                opt.text = `${p.metadata.name || p.id} (${p.metadata.base}x${p.metadata.dimension})`;
+                genGroup.appendChild(opt);
+            });
+            this.selectEl.appendChild(genGroup);
+        }
+
+        // 2. Preset Bundled Puzzles
+        const bundledGroup = document.createElement("optgroup");
+        bundledGroup.label = "🧩 Preset Puzzles";
+        bundledPuzzles.forEach(p => {
             const opt = document.createElement("option");
             opt.value = p.filename || `${p.id}.json`;
             const name = p.metadata ? (p.metadata.name || p.id) : p.id;
             const diff = p.metadata ? (p.metadata.difficulty || '') : '';
             opt.text = diff ? `${name} - ${diff}` : name;
-            this.selectEl.appendChild(opt);
+            bundledGroup.appendChild(opt);
         });
-        if (puzzles.length > 0 && onLoad) {
-            onLoad(puzzles[0].filename || `${puzzles[0].id}.json`);
+        this.selectEl.appendChild(bundledGroup);
+
+        if (selectedValue) {
+            this.selectEl.value = selectedValue;
+        } else if (generatedPuzzles.length > 0) {
+            const firstVal = `gen:${generatedPuzzles[generatedPuzzles.length - 1].id}`;
+            this.selectEl.value = firstVal;
+        } else if (bundledPuzzles.length > 0 && onLoad) {
+            onLoad(bundledPuzzles[0].filename || `${bundledPuzzles[0].id}.json`);
         }
     }
-
-
 }
 
 class SudokuApp {
     constructor() {
         this.game = new SudokuGame();
         this.ui = new SudokuUI();
-        
+
         this.mode = 'entry'; // 'entry', 'notation'
         this.currentNotationColor = 'green';
         this.identifiedNumber = null;
         this.isIdentifyHold = false;
-        
+
         this.currentAxis = 'XY';
         this.currentSlice = 0;
         this.selectedCell = null;
         this.lastSelectedCell = { z: 0, y: 0, x: 0 };
         this.notationBuffer = "";
+        this.generatedPuzzles = [];
+        this.bundledPuzzles = [];
+        this.worker = null;
 
         this.init();
     }
@@ -547,12 +664,148 @@ class SudokuApp {
         document.getElementById("btn-upload").addEventListener("click", () => document.getElementById("puzzle-upload").click());
         document.getElementById("puzzle-upload").addEventListener("change", (e) => this.handleFileUpload(e));
 
+        // Generator Modal & Form Events
+        const genModal = document.getElementById("generator-modal");
+        const btnGenOpen = document.getElementById("btn-generate-open");
+        const btnGenClose = document.getElementById("btn-close-generate");
+        const btnGenCancel = document.getElementById("btn-cancel-generate");
+        const genPreset = document.getElementById("gen-preset");
+        const genDifficulty = document.getElementById("gen-difficulty");
+        const genName = document.getElementById("gen-name");
+        const genRemovalsInput = document.getElementById("gen-removals-input");
+        const genRemovalsHint = document.getElementById("gen-removals-hint");
+        const genForm = document.getElementById("generator-form");
+        const genProgressWrapper = document.getElementById("gen-progress-wrapper");
+        const genProgressText = document.getElementById("gen-progress-text");
+        const btnStartGen = document.getElementById("btn-start-generate");
+
+        const REMOVAL_CALIBRATIONS = {
+            '2x2': { total: 16, name: 'Custom 2D Shi-Doku', low: 4, medium: 6, high: 8, max: 12 },
+            '3x2': { total: 81, name: 'Custom 2D Classic Sudoku', low: 30, medium: 45, high: 55, max: 64 },
+            '4x2': { total: 256, name: 'Custom 2D Hexadecimal Sudoku', low: 80, medium: 130, high: 170, max: 200 },
+            '2x3': { total: 512, name: 'Custom 3D Hyper-Cube', low: 120, medium: 220, high: 320, max: 420 }
+        };
+
+        const updateRemovalsUI = () => {
+            if (!genPreset || !genDifficulty || !genRemovalsInput) return;
+            const presetKey = genPreset.value;
+            const diffKey = genDifficulty.value;
+            const config = REMOVAL_CALIBRATIONS[presetKey] || REMOVAL_CALIBRATIONS['3x2'];
+
+            genRemovalsInput.min = 1;
+            genRemovalsInput.max = config.max;
+
+            if (diffKey === 'custom') {
+                if (genRemovalsHint) genRemovalsHint.innerText = `Custom removal amount (1 to ${config.max} empty cells on ${config.total}-cell grid).`;
+            } else {
+                const targetVal = config[diffKey];
+                genRemovalsInput.value = targetVal;
+                if (genRemovalsHint) genRemovalsHint.innerText = `${diffKey.toUpperCase()} difficulty calibrated to ${targetVal} removals (${Math.round((targetVal / config.total) * 100)}% empty cells).`;
+            }
+        };
+
+        if (btnGenOpen) {
+            btnGenOpen.addEventListener("click", () => {
+                updateRemovalsUI();
+                genModal.style.display = "flex";
+            });
+        }
+
+        const closeModal = () => {
+            if (genModal) genModal.style.display = "none";
+            if (genProgressWrapper) genProgressWrapper.style.display = "none";
+            if (btnStartGen) btnStartGen.disabled = false;
+        };
+
+        if (btnGenClose) btnGenClose.addEventListener("click", closeModal);
+        if (btnGenCancel) btnGenCancel.addEventListener("click", closeModal);
+
+        if (genPreset) {
+            genPreset.addEventListener("change", () => {
+                const config = REMOVAL_CALIBRATIONS[genPreset.value];
+                if (config && genName) genName.value = config.name;
+                updateRemovalsUI();
+            });
+        }
+
+        if (genDifficulty) {
+            genDifficulty.addEventListener("change", () => {
+                updateRemovalsUI();
+            });
+        }
+
+        if (genRemovalsInput) {
+            genRemovalsInput.addEventListener("input", () => {
+                if (genDifficulty) genDifficulty.value = "custom";
+                const config = REMOVAL_CALIBRATIONS[genPreset.value];
+                if (config && genRemovalsHint) {
+                    genRemovalsHint.innerText = `Custom removal amount (${genRemovalsInput.value} of ${config.total} cells).`;
+                }
+            });
+        }
+
+        if (genForm) {
+            genForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const preset = genPreset.value;
+                const name = genName.value.trim() || "Custom Generated Puzzle";
+                let removals = parseInt(genRemovalsInput.value) || 40;
+                const config = REMOVAL_CALIBRATIONS[preset];
+                if (config) {
+                    removals = Math.min(Math.max(1, removals), config.max);
+                }
+
+                let base = 3, dim = 2;
+                if (preset === '2x2') { base = 2; dim = 2; }
+                else if (preset === '3x2') { base = 3; dim = 2; }
+                else if (preset === '4x2') { base = 4; dim = 2; }
+                else if (preset === '2x3') { base = 2; dim = 3; }
+
+                genProgressWrapper.style.display = "flex";
+                genProgressText.innerText = "Initializing generator engine...";
+                btnStartGen.disabled = true;
+
+                if (typeof Worker !== 'undefined') {
+                    if (this.worker) this.worker.terminate();
+                    this.worker = new Worker('./generator-worker.js');
+
+                    this.worker.onmessage = (msg) => {
+                        const data = msg.data;
+                        if (data.type === 'progress') {
+                            genProgressText.innerText = data.status;
+                        } else if (data.type === 'complete') {
+                            closeModal();
+                            const puzzle = data.puzzle;
+                            this.generatedPuzzles.push(puzzle);
+                            const targetVal = `gen:${puzzle.id}`;
+                            this.ui.populatePuzzleList(this.bundledPuzzles, null, targetVal, this.generatedPuzzles);
+                            this.initializePuzzle(puzzle);
+                            this.showToast(`✨ Generated & loaded: ${puzzle.metadata.name}`);
+                        } else if (data.type === 'error') {
+                            alert("Generation failed: " + data.message);
+                            closeModal();
+                        }
+                    };
+
+                    const genDigStrategy = document.getElementById("gen-dig-strategy");
+                    const strategy = genDigStrategy ? genDigStrategy.value : 'entropy';
+
+                    this.worker.postMessage({ base, dim, name, removals, strategy });
+                } else {
+                    alert("Web Workers are not supported in your browser.");
+                    closeModal();
+                }
+            });
+        }
+
+
         document.addEventListener("mousedown", (e) => {
-            const isInteractive = e.target.closest('#sudoku-board') || 
-                                  e.target.closest('#auxiliary-box') || 
-                                  e.target.closest('.sidebar') || 
-                                  e.target.closest('.dim-controls') ||
-                                  e.target.closest('.controls-top');
+            const isInteractive = e.target.closest('#sudoku-board') ||
+                e.target.closest('#auxiliary-box') ||
+                e.target.closest('.sidebar') ||
+                e.target.closest('.dim-controls') ||
+                e.target.closest('.controls-top') ||
+                e.target.closest('.modal-card');
             if (!isInteractive) this.selectCell(null, null, null);
         });
 
@@ -571,15 +824,6 @@ class SudokuApp {
         document.getElementById("btn-undo").addEventListener("click", () => this.undo());
         document.getElementById("btn-redo").addEventListener("click", () => this.redo());
 
-        document.querySelectorAll(".num-btn").forEach(btn => {
-            btn.addEventListener("mousedown", (e) => {
-                e.preventDefault();
-                e.stopPropagation(); 
-                const val = btn.dataset.val === 'enter' ? 'enter' : parseInt(btn.dataset.val);
-                this.handleInput(val);
-            });
-        });
-
         document.addEventListener("keydown", (e) => this.handleKeyDown(e));
 
         document.addEventListener("dragover", (e) => e.preventDefault());
@@ -592,24 +836,37 @@ class SudokuApp {
     }
 
     fetchPuzzles() {
-        fetch('./puzzles/puzzles.json')
+        fetch('./puzzles/puzzles.json', { cache: 'no-cache' })
             .then(res => res.json())
             .then(data => {
-                this.ui.populatePuzzleList(data, (filename) => this.loadPuzzle(filename));
+                this.bundledPuzzles = data;
+                this.ui.populatePuzzleList(data, (filename) => this.loadPuzzle(filename), null, this.generatedPuzzles);
             })
             .catch(err => console.error("Failed to load puzzles index:", err));
     }
 
-    loadPuzzle(filename) {
-        if (!filename) return;
-        const path = filename.startsWith('puzzles/') ? filename : `./puzzles/${filename}`;
-        fetch(path)
+    loadPuzzle(target) {
+        if (!target) return;
+
+        if (target.startsWith('gen:')) {
+            const genId = target.substring(4);
+            const found = this.generatedPuzzles.find(p => p.id === genId);
+            if (found) {
+                this.initializePuzzle(found);
+                this.showToast(`Loaded generated puzzle: ${found.metadata.name}`);
+                return;
+            }
+        }
+
+        const path = target.startsWith('puzzles/') ? target : `./puzzles/${target}`;
+        fetch(path, { cache: 'no-cache' })
             .then(res => res.json())
             .then(data => {
                 this.initializePuzzle(Array.isArray(data) ? data[0] : data);
             })
             .catch(err => console.error("Failed to load puzzle file:", err));
     }
+
 
     showToast(message) {
         if (typeof document === 'undefined') return;
@@ -627,7 +884,7 @@ class SudokuApp {
 
     initializePuzzle(puzzle) {
         this.game.initialize(puzzle);
-        
+
         document.documentElement.style.setProperty('--grid-size', this.game.n);
         document.documentElement.style.setProperty('--base-size', this.game.base);
 
@@ -635,6 +892,10 @@ class SudokuApp {
         this.currentAxis = 'XY';
         this.currentSlice = 0;
         this.notationBuffer = "";
+        this.identifiedNumber = null;
+        this.isIdentifyHold = false;
+
+        this.ui.renderNumpad(this.game, (val) => this.handleNumpadClick(val));
 
         this.refreshAll();
     }
@@ -651,7 +912,7 @@ class SudokuApp {
         this.ui.updateConflicts(errors, isFilled);
         this.ui.updateHighlights(this.game, this.identifiedNumber);
         this.ui.updateHistoryBtns(this.game.undoStack.length, this.game.redoStack.length);
-        this.ui.updateHoldUI(this.isIdentifyHold, this.identifiedNumber);
+        this.ui.updateHoldUI(this.isIdentifyHold, this.identifiedNumber, this.game.base);
     }
 
     selectCell(z, y, x) {
@@ -660,19 +921,23 @@ class SudokuApp {
                 this.flushNotation();
             }
         }
-        
+
         if (z === null) {
             this.selectedCell = null;
             if (!this.isIdentifyHold) this.identifiedNumber = null;
         } else {
             this.selectedCell = { z, y, x };
-            this.lastSelectedCell = { z, y, x }; 
+            this.lastSelectedCell = { z, y, x };
             if (!this.isIdentifyHold) {
-                const val = this.game.board[z][y][x] || this.game.initialBoard[z][y][x];
-                this.identifiedNumber = val !== 0 ? val : null;
+                const initVal = this.game.initialBoard[z][y][x];
+                const boardVal = this.game.board[z][y][x];
+                const isFixed = initVal !== null && initVal !== undefined;
+                const hasVal = !isFixed && boardVal !== null && boardVal !== undefined;
+                const val = isFixed ? initVal : (hasVal ? boardVal : null);
+                this.identifiedNumber = val;
             }
         }
-        
+
         this.ui.renderBoard(this.game, this.currentAxis, this.currentSlice, this.selectedCell, (z, y, x) => this.selectCell(z, y, x));
         this.ui.renderAuxiliaryBox(this.game, this.currentAxis, this.selectedCell);
         this.refreshStatus();
@@ -692,10 +957,19 @@ class SudokuApp {
 
     toggleHoldHighlight() {
         this.isIdentifyHold = !this.isIdentifyHold;
-        if (!this.isIdentifyHold && !this.selectedCell) {
-            this.identifiedNumber = null;
+        if (!this.isIdentifyHold) {
+            if (this.selectedCell) {
+                const { z, y, x } = this.selectedCell;
+                const initVal = this.game.initialBoard[z][y][x];
+                const boardVal = this.game.board[z][y][x];
+                const isFixed = initVal !== null && initVal !== undefined;
+                const hasVal = !isFixed && boardVal !== null && boardVal !== undefined;
+                this.identifiedNumber = isFixed ? initVal : (hasVal ? boardVal : null);
+            } else {
+                this.identifiedNumber = null;
+            }
         }
-        this.refreshStatus();
+        this.refreshAll();
     }
 
     shiftSlice(delta) {
@@ -717,34 +991,59 @@ class SudokuApp {
         this.refreshAll();
     }
 
+    handleNumpadClick(val) {
+        if (val === 'enter') {
+            this.handleInput('enter');
+            return;
+        }
+        if (val === 'clear') {
+            this.handleInput(null);
+            return;
+        }
+
+        const numVal = parseDigit(val, this.game.base);
+
+        if (!this.selectedCell) {
+            if (this.identifiedNumber === numVal || String(this.identifiedNumber) === String(numVal)) {
+                this.identifiedNumber = null;
+            } else {
+                this.identifiedNumber = numVal;
+            }
+            this.refreshAll();
+            return;
+        }
+
+        this.handleInput(numVal);
+    }
+
     handleInput(val) {
         if (!this.selectedCell) {
-            if (val === 0 || val === 'enter') {
+            if (val === null || val === 'clear' || val === 'enter') {
                 this.identifiedNumber = null;
-            } else if (typeof val === 'number') {
-                const nextStr = (this.identifiedNumber === null) ? val.toString() : this.identifiedNumber.toString() + val.toString();
-                let nextVal = parseInt(nextStr);
-                if (nextVal > this.game.n) nextVal = val;
-                this.identifiedNumber = (this.identifiedNumber === nextVal) ? null : nextVal;
+            } else {
+                this.identifiedNumber = (String(this.identifiedNumber) === String(val)) ? null : val;
             }
             this.refreshStatus();
             return;
         }
 
         const { z, y, x } = this.selectedCell;
-        if (this.game.initialBoard[z][y][x] !== 0) return;
+        const initialVal = this.game.initialBoard[z][y][x];
+        const isFixed = initialVal !== null && initialVal !== undefined;
+        if (isFixed) return;
 
         if (val === 'enter') {
             if (this.mode === 'notation') this.flushNotation();
             return;
         }
 
-        if (val === 0) {
+        if (val === null || val === 'clear') {
             this.notationBuffer = "";
             const prev = this.game.board[z][y][x];
             const oldGreen = new Set(this.game.notations[z][y][x].green);
             const oldRed = new Set(this.game.notations[z][y][x].red);
-            if (prev !== 0 || oldGreen.size > 0 || oldRed.size > 0) {
+            const isEmptyAlready = prev === null || prev === undefined;
+            if (!isEmptyAlready || oldGreen.size > 0 || oldRed.size > 0) {
                 this.game.execute({ type: 'clear_all', z, y, x, prev, oldGreen, oldRed });
             }
             this.ui.updateCellVisual(this.game, z, y, x);
@@ -755,17 +1054,17 @@ class SudokuApp {
 
         if (this.mode === 'entry') {
             const prev = this.game.board[z][y][x];
-            const nextVal = prev === 0 ? val : parseInt(prev.toString() + val.toString());
-            if (nextVal > this.game.n) return;
-            if (prev !== nextVal) {
+            if (prev !== val) {
                 const oldGreen = new Set(this.game.notations[z][y][x].green);
                 const oldRed = new Set(this.game.notations[z][y][x].red);
-                this.game.execute({ type: 'entry', z, y, x, prev, val: nextVal, oldGreen, oldRed });
+                this.game.execute({ type: 'entry', z, y, x, prev, val, oldGreen, oldRed });
             }
-        } else { 
-            if (this.game.board[z][y][x] !== 0) return; 
-            this.notationBuffer += val.toString();
-            if (this.game.n < 10) this.flushNotation();
+        } else {
+            const isFilledCell = this.game.board[z][y][x] !== null && this.game.board[z][y][x] !== undefined;
+            if (isFilledCell) return;
+            const color = this.currentNotationColor;
+            const hasNote = this.game.notations[z][y][x][color].has(val);
+            this.game.execute({ type: 'notation', z, y, x, color, val, added: !hasNote });
         }
         this.ui.updateCellVisual(this.game, z, y, x);
         this.refreshStatus();
@@ -773,20 +1072,7 @@ class SudokuApp {
     }
 
     flushNotation() {
-        if (this.notationBuffer.length > 0 && this.selectedCell) {
-            const num = parseInt(this.notationBuffer);
-            this.notationBuffer = "";
-            const { z, y, x } = this.selectedCell;
-            if (num > 0 && num <= this.game.n) {
-                const hasNote = this.game.notations[z][y][x][this.currentNotationColor].has(num);
-                this.game.execute({
-                    type: 'notation', z, y, x, val: num, added: !hasNote, color: this.currentNotationColor
-                });
-            }
-            this.ui.updateCellVisual(this.game, z, y, x);
-            this.refreshStatus();
-            this.ui.renderAuxiliaryBox(this.game, this.currentAxis, this.selectedCell);
-        }
+        this.ui.renderAuxiliaryBox(this.game, this.currentAxis, this.selectedCell);
     }
 
     undo() {
@@ -806,37 +1092,42 @@ class SudokuApp {
     }
 
     handleKeyDown(e) {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA')) return;
+
         const key = e.key;
+        const isHex = this.game.base === 4;
+
         const handledKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backspace', 'Delete', 'Enter', ' '];
-        
         if (handledKeys.includes(key)) {
-            const board = document.querySelector('.board-container');
-            if (board) {
-                const rect = board.getBoundingClientRect();
-                const isFullyVisible = (rect.top >= 0 && rect.bottom <= window.innerHeight && rect.left >= 0 && rect.right <= window.innerWidth);
-                if (isFullyVisible) e.preventDefault();
-            }
+            e.preventDefault();
         }
 
-        if (key >= '1' && key <= '9') this.handleInput(parseInt(key));
-        else if (key === 'Enter' || key === 'NumpadEnter') this.handleInput('enter');
-        else if (key === 'Backspace' || key === 'Delete' || key === '0') this.handleInput(0);
-        else if (key === 'Escape') {
+        const isValidInputKey = isHex ? /^[0-9a-fA-F]$/.test(key) : /^[1-9]$/.test(key);
+
+        if (isValidInputKey) {
+            this.handleNumpadClick(key.toUpperCase());
+        } else if (key === 'Enter' || key === 'NumpadEnter') {
+            this.handleNumpadClick('enter');
+        } else if (key === 'Backspace' || key === 'Delete') {
+            this.handleNumpadClick('clear');
+        } else if (key === 'Escape') {
             if (this.selectedCell) this.selectCell(null, null, null);
             else { this.identifiedNumber = null; this.refreshStatus(); }
+        } else {
+            const keyLower = key.toLowerCase();
+            if (keyLower === 'm') this.setMode('entry');
+            else if (keyLower === 'n') this.setMode('notation');
+            else if (keyLower === 'v') { this.setMode('notation'); this.setNotationColor('green'); }
+            else if (keyLower === 'i') { this.setMode('notation'); this.setNotationColor('red'); }
+            else if (keyLower === 'h') this.toggleHoldHighlight();
+            else if (keyLower === 'z') this.undo();
+            else if (keyLower === 'y') this.redo();
+            else if (key.startsWith('Arrow')) this.handleArrowKey(key);
         }
-        else if (key.toLowerCase() === 'n') this.setMode('notation');
-        else if (key.toLowerCase() === 'e') this.setMode('entry');
-        else if (key.toLowerCase() === 'v') { this.setMode('notation'); this.setNotationColor('green'); }
-        else if (key.toLowerCase() === 'i') { this.setMode('notation'); this.setNotationColor('red'); }
-        else if (key.toLowerCase() === 'h') this.toggleHoldHighlight();
-        else if (key.toLowerCase() === 'z') this.undo();
-        else if (key.toLowerCase() === 'y') this.redo();
-        else if (key.startsWith('Arrow')) this.handleArrowKey(key);
     }
 
     handleArrowKey(key) {
-        const pos = this.selectedCell || this.lastSelectedCell;
+        const pos = this.selectedCell || this.lastSelectedCell || { z: 0, y: 0, x: 0 };
         let { z, y, x } = pos;
         const n = this.game.n;
         if (key === 'ArrowUp') {
@@ -887,7 +1178,7 @@ class SudokuApp {
     async savePuzzle() {
         const baseName = (this.game.metadata.name || "Sudoku").replace(/\s*\(Save\)$/i, '');
         const filename = `${baseName.replace(/\s+/g, '_')}_Save.json`;
-        
+
         const currentData = {
             id: `save-${new Date().getTime()}`,
             metadata: {
@@ -902,13 +1193,13 @@ class SudokuApp {
         for (let z = 0; z < this.game.nz; z++) {
             for (let y = 0; y < this.game.ny; y++) {
                 for (let x = 0; x < this.game.nx; x++) {
-                    if (this.game.initialBoard[z][y][x] !== 0) {
+                    if (this.game.initialBoard[z][y][x] !== null && this.game.initialBoard[z][y][x] !== undefined) {
                         currentData.initial_state.push({ z, y, x, value: this.game.initialBoard[z][y][x] });
-                    } 
+                    }
                     const val = this.game.board[z][y][x];
                     const gNoteArr = Array.from(this.game.notations[z][y][x].green);
                     const rNoteArr = Array.from(this.game.notations[z][y][x].red);
-                    if (val !== 0 || gNoteArr.length > 0 || rNoteArr.length > 0) {
+                    if ((val !== null && val !== undefined) || gNoteArr.length > 0 || rNoteArr.length > 0) {
                         currentData.current_state.push({
                             z, y, x, value: val,
                             notations: { green: gNoteArr, red: rNoteArr }
@@ -965,7 +1256,7 @@ class SudokuApp {
 
 // Export for Node tests if running in CJS environment
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { SudokuGame };
+    module.exports = { SudokuGame, formatDigit, parseDigit };
 } else {
     document.addEventListener("DOMContentLoaded", () => {
         window.app = new SudokuApp();

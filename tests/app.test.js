@@ -79,4 +79,28 @@ describe('SudokuGame Core Engine Tests', () => {
         game.execute({ type: 'notation', z: 0, y: 0, x: 0, val: 9, added: true, color: 'red' });
         assert.ok(game.notations[0][0][0].red.has(9));
     });
+
+    test('formatDigit and parseDigit handling for Hex (Base 4) and Standard puzzles', () => {
+        const { formatDigit, parseDigit } = require('../app.js');
+
+        // formatDigit
+        assert.strictEqual(formatDigit(null), "");
+        assert.strictEqual(formatDigit(undefined), "");
+        assert.strictEqual(formatDigit("0"), "0");
+        assert.strictEqual(formatDigit("E"), "E");
+        assert.strictEqual(formatDigit(5), "5");
+
+        // parseDigit for Base 4 (Hex)
+        assert.strictEqual(parseDigit('0', 4), '0');
+        assert.strictEqual(parseDigit('e', 4), 'E');
+        assert.strictEqual(parseDigit('E', 4), 'E');
+        assert.strictEqual(parseDigit('f', 4), 'F');
+        assert.strictEqual(parseDigit(14, 4), 'E');
+        assert.strictEqual(parseDigit('clear', 4), null);
+
+        // parseDigit for Non-Hex (Standard)
+        assert.strictEqual(parseDigit('5', 3), 5);
+        assert.strictEqual(parseDigit('9', 3), 9);
+        assert.strictEqual(parseDigit('clear', 3), null);
+    });
 });

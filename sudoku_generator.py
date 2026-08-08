@@ -440,7 +440,7 @@ def generate_sudoku(base, dimension, output_file=None, force=False, progress=Fal
             for i, c in enumerate(coords):
                 cell_data[f"dim_{i}"] = int(c)
                 
-        cell_data["value"] = int(v)
+        cell_data["value"] = int(v) - 1 if base == 4 else int(v)
         initial_state.append(cell_data)
 
     puzzle = {

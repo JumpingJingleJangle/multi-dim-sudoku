@@ -1,5 +1,5 @@
-const CACHE_NAME = 'multi-dim-sudoku-v4';
-const ASSETS_TO_CACHE = ["./", "./index.html", "./style.css", "./app.js", "./manifest.json", "./icon.png", "./puzzles/base2-3d-test.json", "./puzzles/base2-test.json", "./puzzles/base4-test.json", "./puzzles/easy-1.json", "./puzzles/puzzles.json"];
+const CACHE_NAME = 'multi-dim-sudoku-v5';
+const ASSETS_TO_CACHE = ["./", "./index.html", "./style.css", "./app.js", "./generator-worker.js", "./manifest.json", "./icon.png", "./puzzles/base2-3d-test.json", "./puzzles/base2-test.json", "./puzzles/base4-test.json", "./puzzles/easy-1.json", "./puzzles/puzzles.json"];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -25,24 +25,18 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      const fetchRequest = event.request.clone();
-      return fetch(fetchRequest).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
+    fetch(event.request).then((response) => {
+      if (response && response.status === 200 && response.type === 'basic') {
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseToCache);
         });
-        return response;
-      }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
+      }
+      return response;
+    }).catch(() => {
+      return caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+        if (event.request.mode === 'navigate') return caches.match('./index.html');
       });
     })
   );
