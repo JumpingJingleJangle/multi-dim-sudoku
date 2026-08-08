@@ -71,4 +71,17 @@ describe('In-Browser Generator Engine Tests', () => {
         const res = solver.solve();
         assert.strictEqual(res.solvable, true, 'Hex puzzle MUST be uniquely solvable');
     });
+
+    test('Max Removal Mode (removals: -1) Digs Until Minimal Puzzle', () => {
+        const fullPuzzle = generateFullPuzzle(2, 2);
+        const playable = processDigging(fullPuzzle, { removals: -1, name: "Max Removal 2x2" });
+        assert.ok(playable);
+        assert.ok(playable.initial_state.length > 0 && playable.initial_state.length <= 16);
+        
+        let stateMap = new Map();
+        playable.initial_state.forEach(c => stateMap.set(`${c.y},${c.x}`, c.value));
+        const solver = new ConstraintSolver(stateMap, 2, 2);
+        const res = solver.solve();
+        assert.strictEqual(res.solvable, true, 'Max removal puzzle MUST be uniquely solvable');
+    });
 });

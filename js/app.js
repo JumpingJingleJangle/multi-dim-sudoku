@@ -260,7 +260,13 @@ export class SudokuApp {
 
         const config = CALIBRATION_TABLE[preset] || CALIBRATION_TABLE["3x2"];
 
-        if (diff !== "custom") {
+        if (diff === "max") {
+            removalsInput.value = -1;
+            if (strategyEl) strategyEl.value = "entropy";
+            if (removalsHint) {
+                removalsHint.innerText = `Max removal mode active for ${config.name} (-1 = dig until minimal puzzle reached).`;
+            }
+        } else if (diff !== "custom") {
             const cal = config[diff] || config.medium;
             removalsInput.value = cal.removals;
             if (strategyEl) strategyEl.value = cal.strategy;

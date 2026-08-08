@@ -336,7 +336,8 @@ function processDigging(fullPuzzle, options = {}) {
     const base = meta.base;
     const dim = meta.dimension;
     const n = base ** dim;
-    const targetRemovals = options.removals || (dim === 3 ? 120 : (n === 4 ? 6 : (n === 16 ? 80 : 40)));
+    const isMaxMode = options.removals !== undefined && options.removals < 0;
+    const targetRemovals = isMaxMode ? (dim === 3 ? 512 : n * n) : (options.removals !== undefined ? options.removals : (dim === 3 ? 120 : (n === 4 ? 6 : (n === 16 ? 80 : 40))));
     const strategy = options.strategy || 'weighted'; // 'weighted', 'entropy', 'tight'
 
     let stateMap = new Map();
@@ -353,6 +354,8 @@ function processDigging(fullPuzzle, options = {}) {
     let peersMap = dummySolver.peers;
 
     let removedCount = 0;
+    let consecutiveFailures = 0;
+    const maxFailures = dim === 3 ? 30 : 25;
     let potentialCoords = [...keys];
 
     while (potentialCoords.length > 0 && removedCount < targetRemovals) {
@@ -420,6 +423,7 @@ function processDigging(fullPuzzle, options = {}) {
             stateMap.set(bestCandidate, emptyVal);
             potentialCoords = potentialCoords.filter(k => k !== bestCandidate);
             removedCount++;
+            consecutiveFailures = 0;
             let peers = peersMap.get(bestCandidate);
             if (peers) {
                 for (let pKey of peers) {
@@ -427,7 +431,11 @@ function processDigging(fullPuzzle, options = {}) {
                 }
             }
         } else {
+            consecutiveFailures++;
             potentialCoords.shift();
+            if (isMaxMode && consecutiveFailures >= maxFailures) {
+                break;
+            }
         }
     }
 
