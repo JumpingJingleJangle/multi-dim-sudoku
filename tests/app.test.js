@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { test, describe } from 'node:test';
 import { SudokuGame } from '../js/game.js';
+import { UIState } from '../js/state.js';
 import { formatDigit, parseDigit } from '../js/utils.js';
 
 describe('SudokuGame Core Engine Tests', () => {
@@ -101,5 +102,37 @@ describe('SudokuGame Core Engine Tests', () => {
         assert.strictEqual(parseDigit('5', 3), 5);
         assert.strictEqual(parseDigit('9', 3), 9);
         assert.strictEqual(parseDigit('clear', 3), null);
+    });
+});
+
+describe('UIState Model Tests', () => {
+    test('Initialization & Reset', () => {
+        const state = new UIState();
+        assert.strictEqual(state.selectedCell, null);
+        assert.strictEqual(state.currentAxis, 'XY');
+        assert.strictEqual(state.currentSlice, 0);
+        assert.strictEqual(state.mode, 'entry');
+
+        state.selectCell(1, 2, 3);
+        state.setMode('notation');
+        state.shiftSlice(2, 8);
+        assert.strictEqual(state.currentSlice, 2);
+        assert.strictEqual(state.mode, 'notation');
+
+        state.reset();
+        assert.strictEqual(state.selectedCell, null);
+        assert.strictEqual(state.currentSlice, 0);
+        assert.strictEqual(state.mode, 'entry');
+    });
+
+    test('3D Slicing & Axis Pivot', () => {
+        const state = new UIState();
+        state.selectCell(1, 4, 7);
+        state.pivotAxis('XZ');
+        assert.strictEqual(state.currentAxis, 'XZ');
+        assert.strictEqual(state.currentSlice, 4);
+
+        state.shiftSlice(1, 8);
+        assert.strictEqual(state.currentSlice, 5);
     });
 });

@@ -6,23 +6,14 @@
 
 import { SudokuGame } from './game.js';
 import { SudokuUI } from './ui.js';
+import { UIState } from './state.js';
 import { parseDigit } from './utils.js';
 
 export class SudokuApp {
     constructor() {
         this.game = new SudokuGame();
         this.ui = new SudokuUI();
-
-        this.selectedCell = null;
-        this.lastSelectedCell = null;
-        this.currentAxis = 'XY';
-        this.currentSlice = 0;
-
-        this.mode = 'entry';
-        this.currentNotationColor = 'green';
-        this.notationBuffer = "";
-        this.identifiedNumber = null;
-        this.isIdentifyHold = false;
+        this.state = new UIState();
 
         this.bundledPuzzles = [];
         this.generatedPuzzles = [];
@@ -30,6 +21,25 @@ export class SudokuApp {
 
         this.init();
     }
+
+    get selectedCell() { return this.state.selectedCell; }
+    set selectedCell(v) { this.state.selectedCell = v; }
+    get lastSelectedCell() { return this.state.lastSelectedCell; }
+    set lastSelectedCell(v) { this.state.lastSelectedCell = v; }
+    get currentAxis() { return this.state.currentAxis; }
+    set currentAxis(v) { this.state.currentAxis = v; }
+    get currentSlice() { return this.state.currentSlice; }
+    set currentSlice(v) { this.state.currentSlice = v; }
+    get mode() { return this.state.mode; }
+    set mode(v) { this.state.mode = v; }
+    get currentNotationColor() { return this.state.currentNotationColor; }
+    set currentNotationColor(v) { this.state.currentNotationColor = v; }
+    get notationBuffer() { return this.state.notationBuffer; }
+    set notationBuffer(v) { this.state.notationBuffer = v; }
+    get identifiedNumber() { return this.state.identifiedNumber; }
+    set identifiedNumber(v) { this.state.identifiedNumber = v; }
+    get isIdentifyHold() { return this.state.isIdentifyHold; }
+    set isIdentifyHold(v) { this.state.isIdentifyHold = v; }
 
     async init() {
         this.setupEventListeners();
@@ -112,6 +122,9 @@ export class SudokuApp {
     }
 
     async loadSelectedPuzzle(val) {
+        if (document.activeElement && typeof document.activeElement.blur === 'function' && document.activeElement !== document.body) {
+            document.activeElement.blur();
+        }
         if (!val) return;
         if (val.startsWith('gen:')) {
             const genId = val.replace('gen:', '');
@@ -324,18 +337,21 @@ export class SudokuApp {
         setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3000);
     }
 
+    getCellValue(z, y, x) {
+        const initVal = this.game.initialBoard[z][y][x];
+        const boardVal = this.game.board[z][y][x];
+        const isFixed = initVal !== null && initVal !== undefined;
+        const hasVal = !isFixed && boardVal !== null && boardVal !== undefined;
+        return isFixed ? initVal : (hasVal ? boardVal : null);
+    }
+
     initializePuzzle(puzzle) {
         this.game.initialize(puzzle);
 
         document.documentElement.style.setProperty('--grid-size', this.game.n);
         document.documentElement.style.setProperty('--base-size', this.game.base);
 
-        this.selectedCell = null;
-        this.currentAxis = 'XY';
-        this.currentSlice = 0;
-        this.notationBuffer = "";
-        this.identifiedNumber = null;
-        this.isIdentifyHold = false;
+        this.state.reset();
 
         this.ui.renderNumpad(this.game, (val) => this.handleNumpadClick(val));
 
@@ -343,93 +359,63 @@ export class SudokuApp {
     }
 
     refreshAll() {
-        this.ui.updateDimUI(this.game.dimension, this.currentAxis, this.currentSlice);
-        this.ui.renderBoard(this.game, this.currentAxis, this.currentSlice, this.selectedCell, (z, y, x) => this.selectCell(z, y, x));
-        this.ui.renderAuxiliaryBox(this.game, this.currentAxis, this.selectedCell);
+        this.ui.updateDimUI(this.game.dimension, this.state.currentAxis, this.state.currentSlice);
+        this.ui.renderBoard(this.game, this.state.currentAxis, this.state.currentSlice, this.state.selectedCell, (z, y, x) => this.selectCell(z, y, x));
+        this.ui.renderAuxiliaryBox(this.game, this.state.currentAxis, this.state.selectedCell);
         this.refreshStatus();
     }
 
     refreshStatus() {
         const { errors, isFilled } = this.game.getConflicts();
         this.ui.updateConflicts(errors, isFilled);
-        this.ui.updateHighlights(this.game, this.identifiedNumber);
+        this.ui.updateHighlights(this.game, this.state.identifiedNumber);
         this.ui.updateHistoryBtns(this.game.undoStack.length, this.game.redoStack.length);
-        this.ui.updateHoldUI(this.isIdentifyHold, this.identifiedNumber, this.game.base);
+        this.ui.updateHoldUI(this.state.isIdentifyHold, this.state.identifiedNumber, this.game.base);
     }
 
     selectCell(z, y, x) {
-        if (this.selectedCell) {
-            if (this.mode === 'notation' && (this.selectedCell.z !== z || this.selectedCell.y !== y || this.selectedCell.x !== x)) {
+        if (document.activeElement && typeof document.activeElement.blur === 'function' && document.activeElement !== document.body) {
+            document.activeElement.blur();
+        }
+
+        if (this.state.selectedCell) {
+            if (this.state.mode === 'notation' && (this.state.selectedCell.z !== z || this.state.selectedCell.y !== y || this.state.selectedCell.x !== x)) {
                 this.flushNotation();
             }
         }
 
-        if (z === null) {
-            this.selectedCell = null;
-            if (!this.isIdentifyHold) this.identifiedNumber = null;
-        } else {
-            this.selectedCell = { z, y, x };
-            this.lastSelectedCell = { z, y, x };
-            if (!this.isIdentifyHold) {
-                const initVal = this.game.initialBoard[z][y][x];
-                const boardVal = this.game.board[z][y][x];
-                const isFixed = initVal !== null && initVal !== undefined;
-                const hasVal = !isFixed && boardVal !== null && boardVal !== undefined;
-                const val = isFixed ? initVal : (hasVal ? boardVal : null);
-                this.identifiedNumber = val;
-            }
-        }
+        this.state.selectCell(z, y, x, (cz, cy, cx) => this.getCellValue(cz, cy, cx));
 
-        this.ui.renderBoard(this.game, this.currentAxis, this.currentSlice, this.selectedCell, (z, y, x) => this.selectCell(z, y, x));
-        this.ui.renderAuxiliaryBox(this.game, this.currentAxis, this.selectedCell);
+        this.ui.renderBoard(this.game, this.state.currentAxis, this.state.currentSlice, this.state.selectedCell, (z, y, x) => this.selectCell(z, y, x));
+        this.ui.renderAuxiliaryBox(this.game, this.state.currentAxis, this.state.selectedCell);
         this.refreshStatus();
     }
 
     setMode(newMode) {
-        if (this.mode === 'notation' && newMode !== 'notation') this.flushNotation();
-        this.mode = newMode;
-        if (this.mode !== 'notation') this.notationBuffer = "";
-        this.ui.updateModeUI(this.mode, this.currentNotationColor);
+        if (this.state.mode === 'notation' && newMode !== 'notation') this.flushNotation();
+        this.state.setMode(newMode);
+        this.ui.updateModeUI(this.state.mode, this.state.currentNotationColor);
     }
 
     setNotationColor(color) {
-        this.currentNotationColor = color;
-        this.ui.updateModeUI(this.mode, this.currentNotationColor);
+        this.state.setNotationColor(color);
+        this.ui.updateModeUI(this.state.mode, this.state.currentNotationColor);
     }
 
     toggleHoldHighlight() {
-        this.isIdentifyHold = !this.isIdentifyHold;
-        if (!this.isIdentifyHold) {
-            if (this.selectedCell) {
-                const { z, y, x } = this.selectedCell;
-                const initVal = this.game.initialBoard[z][y][x];
-                const boardVal = this.game.board[z][y][x];
-                const isFixed = initVal !== null && initVal !== undefined;
-                const hasVal = !isFixed && boardVal !== null && boardVal !== undefined;
-                this.identifiedNumber = isFixed ? initVal : (hasVal ? boardVal : null);
-            } else {
-                this.identifiedNumber = null;
-            }
-        }
+        this.state.toggleHold((cz, cy, cx) => this.getCellValue(cz, cy, cx));
         this.refreshAll();
     }
 
     shiftSlice(delta) {
         if (this.game.dimension === 2) return;
-        this.currentSlice = (this.currentSlice + delta + this.game.n) % this.game.n;
+        this.state.shiftSlice(delta, this.game.n);
         this.refreshAll();
     }
 
     pivotAxis(newAxis) {
-        if (this.game.dimension === 2 || this.currentAxis === newAxis) return;
-        this.currentAxis = newAxis;
-        if (this.selectedCell) {
-            if (this.currentAxis === 'XY') this.currentSlice = this.selectedCell.z;
-            else if (this.currentAxis === 'XZ') this.currentSlice = this.selectedCell.y;
-            else if (this.currentAxis === 'YZ') this.currentSlice = this.selectedCell.x;
-        } else {
-            this.currentSlice = 0;
-        }
+        if (this.game.dimension === 2) return;
+        this.state.pivotAxis(newAxis);
         this.refreshAll();
     }
 

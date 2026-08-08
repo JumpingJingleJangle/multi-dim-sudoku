@@ -451,6 +451,9 @@ export class SudokuUI {
             if (this.elements.btnLoad) {
                 this.elements.btnLoad.onclick = () => {
                     onLoad(this.selectEl.value);
+                    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                        document.activeElement.blur();
+                    }
                 };
             }
         }
