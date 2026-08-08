@@ -1,0 +1,8 @@
+{
+  "name": "multi-dim-sudoku",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/app.test.js tests/generator.test.js"
+  }
+}

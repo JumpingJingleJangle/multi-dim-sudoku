@@ -1,5 +1,22 @@
-const CACHE_NAME = 'multi-dim-sudoku-v5';
-const ASSETS_TO_CACHE = ["./", "./index.html", "./style.css", "./app.js", "./generator-worker.js", "./manifest.json", "./icon.png", "./puzzles/base2-3d-test.json", "./puzzles/base2-test.json", "./puzzles/base4-test.json", "./puzzles/easy-1.json", "./puzzles/puzzles.json"];
+const CACHE_NAME = 'multi-dim-sudoku-v8';
+const ASSETS_TO_CACHE = [
+  "./",
+  "./index.html",
+  "./style.css",
+  "./js/app.js",
+  "./js/game.js",
+  "./js/ui.js",
+  "./js/utils.js",
+  "./js/generator/dlx-solver.js",
+  "./js/generator/generator-worker.js",
+  "./manifest.json",
+  "./icon.png",
+  "./puzzles/base2-3d-test.json",
+  "./puzzles/base2-test.json",
+  "./puzzles/base4-test.json",
+  "./puzzles/easy-1.json",
+  "./puzzles/puzzles.json"
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

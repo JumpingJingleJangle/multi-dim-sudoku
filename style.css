@@ -1,3 +1,6 @@
+/* ==========================================================================
+   SECTION 1: DESIGN TOKENS & CSS CUSTOM PROPERTIES
+   ========================================================================== */
 :root {
     --bg-color: #0f172a;
     --card-bg: #1e293b;
@@ -26,6 +29,9 @@
     --identify-shadow: #facc15;
 }
 
+/* ==========================================================================
+   SECTION 2: BASE LAYOUT & TYPOGRAPHY
+   ========================================================================== */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -198,6 +204,9 @@ select:focus {
     justify-content: center;
 }
 
+/* ==========================================================================
+   SECTION 3: SUDOKU BOARD GRID & 3D AUXILIARY LAYER
+   ========================================================================== */
 #sudoku-board {
     display: grid;
     grid-template-columns: repeat(var(--grid-size), var(--cell-size));
@@ -381,6 +390,9 @@ select:focus {
     flex: 1;
 }
 
+/* ==========================================================================
+   SECTION 4: NUMPAD & INPUT CONTROLS
+   ========================================================================== */
 .numpad {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -497,7 +509,9 @@ select:focus {
     pointer-events: none !important;
 }
 
-/* Toast Notifications */
+/* ==========================================================================
+   SECTION 5: GENERATOR MODAL & TOAST NOTIFICATIONS
+   ========================================================================== */
 .toast-notification {
     position: fixed;
     bottom: 24px;

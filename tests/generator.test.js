@@ -1,6 +1,6 @@
-const assert = require('assert');
-const { test, describe } = require('node:test');
-const { generateFullPuzzle, ConstraintSolver, processDigging } = require('../generator-worker.js');
+import assert from 'assert';
+import { test, describe } from 'node:test';
+import { generateFullPuzzle, ConstraintSolver, processDigging } from '../js/generator/generator-worker.js';
 
 describe('In-Browser Generator Engine Tests', () => {
     test('Generate 2x2 (Base 2 Dim 2) Full Solution', () => {

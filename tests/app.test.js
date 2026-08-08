@@ -1,6 +1,7 @@
-const assert = require('assert');
-const { test, describe } = require('node:test');
-const { SudokuGame } = require('../app.js');
+import assert from 'assert';
+import { test, describe } from 'node:test';
+import { SudokuGame } from '../js/game.js';
+import { formatDigit, parseDigit } from '../js/utils.js';
 
 describe('SudokuGame Core Engine Tests', () => {
     test('Initialization with 2D puzzle', () => {
@@ -81,8 +82,6 @@ describe('SudokuGame Core Engine Tests', () => {
     });
 
     test('formatDigit and parseDigit handling for Hex (Base 4) and Standard puzzles', () => {
-        const { formatDigit, parseDigit } = require('../app.js');
-
         // formatDigit
         assert.strictEqual(formatDigit(null), "");
         assert.strictEqual(formatDigit(undefined), "");

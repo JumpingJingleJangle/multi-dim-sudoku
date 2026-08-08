@@ -1,217 +1,10 @@
-// --- In-Browser Web Worker for Multi-Dimensional Sudoku Generation & Digging ---
+import { DLX } from './dlx-solver.js';
 
 const HEX_SYMBOLS = ['0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'];
 
 function getSymbol(v, base) {
     if (base === 4) return HEX_SYMBOLS[v - 1];
     return v;
-}
-
-// DLX Engine Node Data Structures
-class Node {
-    constructor(col = null) {
-        this.L = this;
-        this.R = this;
-        this.U = this;
-        this.D = this;
-        this.C = col;
-        this.row_info = null;
-    }
-}
-
-class ColumnNode extends Node {
-    constructor(name) {
-        super(null);
-        this.C = this;
-        this.size = 0;
-        this.name = name;
-    }
-}
-
-class DLX {
-    constructor(colNames) {
-        this.h = new ColumnNode("header");
-        this.cols = [];
-        this.colDict = {};
-
-        let prev = this.h;
-        for (let name of colNames) {
-            let node = new ColumnNode(name);
-            this.cols.push(node);
-            this.colDict[name] = node;
-            node.L = prev;
-            prev.R = node;
-            prev = node;
-        }
-        prev.R = this.h;
-        this.h.L = prev;
-    }
-
-    addRow(rowInfo, colNamesForRow) {
-        let first = null;
-        for (let name of colNamesForRow) {
-            let col = this.colDict[name];
-            if (!col) continue;
-            let node = new Node(col);
-            node.row_info = rowInfo;
-
-            node.D = col;
-            node.U = col.U;
-            col.U.D = node;
-            col.U = node;
-            col.size += 1;
-
-            if (first === null) {
-                first = node;
-            } else {
-                node.L = first.L;
-                node.R = first;
-                first.L.R = node;
-                first.L = node;
-            }
-        }
-        return first;
-    }
-
-    cover(c) {
-        c.R.L = c.L;
-        c.L.R = c.R;
-        let i = c.D;
-        while (i !== c) {
-            let j = i.R;
-            while (j !== i) {
-                j.D.U = j.U;
-                j.U.D = j.D;
-                j.C.size -= 1;
-                j = j.R;
-            }
-            i = i.D;
-        }
-    }
-
-    uncover(c) {
-        let i = c.U;
-        while (i !== c) {
-            let j = i.L;
-            while (j !== i) {
-                j.C.size += 1;
-                j.D.U = j;
-                j.U.D = j;
-                j = j.L;
-            }
-            i = i.U;
-        }
-        c.R.L = c;
-        c.L.R = c;
-    }
-
-    search(solutions) {
-        if (this.h.R === this.h) {
-            return true;
-        }
-
-        // Choose column with minimum size
-        let c = this.h.R;
-        let minCol = c;
-        while (c !== this.h) {
-            if (c.size < minCol.size) {
-                minCol = c;
-            }
-            c = c.R;
-        }
-
-        if (minCol.size === 0) return false;
-
-        this.cover(minCol);
-
-        let rows = [];
-        let r = minCol.D;
-        while (r !== minCol) {
-            rows.push(r);
-            r = r.D;
-        }
-        rows.sort(() => Math.random() - 0.5);
-
-        for (let rowNode of rows) {
-            solutions.push(rowNode.row_info);
-
-            let j = rowNode.R;
-            while (j !== rowNode) {
-                this.cover(j.C);
-                j = j.R;
-            }
-
-            if (this.search(solutions)) {
-                return true;
-            }
-
-            solutions.pop();
-            j = rowNode.L;
-            while (j !== rowNode) {
-                this.uncover(j.C);
-                j = j.L;
-            }
-        }
-
-        this.uncover(minCol);
-        return false;
-    }
-
-    countSolutions(maxCount = 2) {
-        let count = 0;
-        const searchCount = () => {
-            if (this.h.R === this.h) {
-                count++;
-                return count >= maxCount;
-            }
-
-            let c = this.h.R;
-            let minCol = c;
-            while (c !== this.h) {
-                if (c.size < minCol.size) {
-                    minCol = c;
-                }
-                c = c.R;
-            }
-
-            if (minCol.size === 0) return false;
-
-            this.cover(minCol);
-
-            let r = minCol.D;
-            while (r !== minCol) {
-                let j = r.R;
-                while (j !== r) {
-                    this.cover(j.C);
-                    j = j.R;
-                }
-
-                if (searchCount()) {
-                    j = r.L;
-                    while (j !== r) {
-                        this.uncover(j.C);
-                        j = j.L;
-                    }
-                    this.uncover(minCol);
-                    return true;
-                }
-
-                j = r.L;
-                while (j !== r) {
-                    this.uncover(j.C);
-                    j = j.L;
-                }
-                r = r.D;
-            }
-
-            this.uncover(minCol);
-            return false;
-        };
-
-        searchCount();
-        return count;
-    }
-
 }
 
 // 3D Seed Generator & Isomorphic Shuffling
@@ -671,25 +464,27 @@ function processDigging(fullPuzzle, options = {}) {
 // Worker Communication Interface
 if (typeof self !== 'undefined') {
     self.onmessage = function (e) {
-        const { base, dim, name, removals, options } = e.data;
+        const { base, dim, name, removals, strategy, difficulty } = e.data;
         try {
-            self.postMessage({ type: 'progress', status: 'Generating solution matrix...' });
+            self.postMessage({ type: 'STATUS', message: 'Generating solution matrix...' });
             let fullPuzzle = generateFullPuzzle(base, dim);
 
             if (!fullPuzzle) {
-                self.postMessage({ type: 'error', message: 'Failed to generate solution matrix.' });
+                self.postMessage({ type: 'RESULT', status: 'ERROR', message: 'Failed to generate solution matrix.' });
                 return;
             }
 
-            self.postMessage({ type: 'progress', status: 'Digging clues...' });
-            let playablePuzzle = processDigging(fullPuzzle, { ...options, name, removals });
+            self.postMessage({ type: 'STATUS', message: 'Digging clues for playable puzzle...' });
+            let playablePuzzle = processDigging(fullPuzzle, { strategy, difficulty, name, removals });
 
-            self.postMessage({ type: 'complete', puzzle: playablePuzzle });
+            self.postMessage({ type: 'RESULT', status: 'SUCCESS', puzzle: playablePuzzle });
         } catch (err) {
-            self.postMessage({ type: 'error', message: err.message });
+            self.postMessage({ type: 'RESULT', status: 'ERROR', message: err.message });
         }
     };
 }
+
+export { generateFullPuzzle, ConstraintSolver, processDigging };
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { generateFullPuzzle, ConstraintSolver, processDigging };
