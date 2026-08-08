@@ -13,11 +13,14 @@ A sleek, standalone Progressive Web App (PWA) for playing 2D and 3D multi-dimens
   - **Layer Shift**: Step forward and backward through layers in real time.
   - **Active Box Context**: Auxiliary visualization displaying all 3D layers of the selected sub-box simultaneously.
 - **Dual Interaction Modes**:
-  - **Entry Mode (Key `E`)**: Directly enter numbers.
+  - **Entry Mode (Key `M`)**: Directly enter numbers.
   - **Notation Mode (Key `N`)**: Add custom valid (Green, key `V`) or invalid (Red, key `I`) digit candidates.
   - **Hold Highlight (Key `H`)**: Lock digit selection for fast identification across the entire board.
+- **In-Browser DLX Generator Engine**:
+  - Asynchronous Web Worker puzzle generator powered by Knuth's **Dancing Links (DLX)** exact cover matrix algorithm.
+  - **Max Removal Mode (`-1`)**: Attempt clue removals until a minimal uniquely-solvable puzzle state is reached.
 - **Full History**: Undo (`Z`) & Redo (`Y`) state stack.
-- **File Management**: Load bundled puzzles, upload custom `.json` puzzles, and export saved progress.
+- **File Management**: Load bundled puzzles, upload custom `.json` puzzles, generate custom puzzles, and export saved progress.
 
 ## GitHub Pages Deployment
 
@@ -41,5 +44,5 @@ Then open `http://localhost:8000` in your web browser.
 Run the automated Node.js unit test suite:
 
 ```bash
-node --test tests/app.test.js
+npm test
 ```

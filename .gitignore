@@ -1,3 +1,6 @@
+# Dependencies
+node_modules/
+
 # Environment and cache files
 .env
 __pycache__/

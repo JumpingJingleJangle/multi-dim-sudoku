@@ -1,10 +1,11 @@
-const CACHE_NAME = 'multi-dim-sudoku-v8';
+const CACHE_NAME = 'multi-dim-sudoku-v1';
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
   "./js/app.js",
   "./js/game.js",
+  "./js/state.js",
   "./js/ui.js",
   "./js/utils.js",
   "./js/generator/dlx-solver.js",

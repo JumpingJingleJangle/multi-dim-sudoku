@@ -84,7 +84,7 @@ export class SudokuApp {
 
     async loadBundledPuzzles() {
         try {
-            const res = await fetch(`./puzzles/puzzles.json?t=${Date.now()}`, { cache: 'no-cache' });
+            const res = await fetch('./puzzles/puzzles.json');
             if (!res.ok) throw new Error("Failed to fetch puzzle list");
             const puzzleItems = await res.json();
 
@@ -92,7 +92,7 @@ export class SudokuApp {
             for (let item of puzzleItems) {
                 try {
                     const fname = typeof item === 'string' ? item : item.filename;
-                    const pRes = await fetch(`./puzzles/${fname}?t=${Date.now()}`, { cache: 'no-cache' });
+                    const pRes = await fetch(`./puzzles/${fname}`);
                     if (pRes.ok) {
                         const pData = await pRes.json();
                         this.bundledPuzzles.push({ filename: fname, metadata: pData.metadata || item.metadata, data: pData });
@@ -132,7 +132,7 @@ export class SudokuApp {
             if (p) this.initializePuzzle(p);
         } else {
             try {
-                const pRes = await fetch(`./puzzles/${val}?t=${Date.now()}`, { cache: 'no-cache' });
+                const pRes = await fetch(`./puzzles/${val}`);
                 if (pRes.ok) {
                     const pData = await pRes.json();
                     const existing = this.bundledPuzzles.find(item => item.filename === val);

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/app.test.js tests/generator.test.js"
+    "test": "node --test tests/app.test.js tests/generator.test.js tests/ui.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^22.1.0"
   }
 }
