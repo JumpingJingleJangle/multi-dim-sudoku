@@ -1,48 +1,76 @@
-# Multi-Dimensional Sudoku PWA
+# Multi-Dimensional Sudoku
 
-A sleek, standalone Progressive Web App (PWA) for playing 2D and 3D multi-dimensional Sudoku puzzles offline in your browser. Built for speed, responsiveness, and zero dependencies, servable directly from GitHub Pages or any static web server.
+A web application for playing generalizations of Sudoku allowing for 3d puzzles and 16x16 puzzles in the browser.
 
 ## Features
 
-- **Single Page PWA**: Fully functional offline web application with Web App Manifest (`manifest.json`) and Service Worker (`sw.js`) pre-caching.
 - **Multi-Dimensional Grid Support**:
   - **2D Sudoku**: Classic 9x9 (Base 3), Shi-Doku 4x4 (Base 2), and Hexadecimal 16x16 (Base 4).
-  - **3D Hyper-Grids**: 3D Sudoku hyper-cubes with 3D block constraint propagation across orthogonal planes and sub-boxes.
-- **Dynamic 3D Navigation**:
-  - **Plane Pivot Controls**: Toggle view plane dynamically across **XY**, **XZ**, and **YZ** axes.
-  - **Layer Shift**: Step forward and backward through layers in real time.
-  - **Active Box Context**: Auxiliary visualization displaying all 3D layers of the selected sub-box simultaneously.
-- **Dual Interaction Modes**:
-  - **Entry Mode (Key `M`)**: Directly enter numbers.
-  - **Notation Mode (Key `N`)**: Add custom valid (Green, key `V`) or invalid (Red, key `I`) digit candidates.
-  - **Hold Highlight (Key `H`)**: Lock digit selection for fast identification across the entire board.
-- **In-Browser & Node DLX Generator Engine**:
-  - Asynchronous Web Worker puzzle generator powered by Knuth's **Dancing Links (DLX)** exact cover matrix algorithm.
-  - **Max Removal Mode (`-1`)**: Attempt clue removals until a minimal uniquely-solvable puzzle state is reached.
-  - **Offline CLI Tool**: Command-line generator script for batch puzzle creation.
-- **Full History**: Undo (`Z`) & Redo (`Y`) state stack.
-- **File Management**: Load bundled puzzles, upload custom `.json` puzzles, generate custom puzzles, and export saved progress.
+  - **3D Hyper-Grids**: 3D Sudoku hyper-cubes with 3D constraint propagation across orthogonal planes and sub-boxes.
+- **3D Navigation**:
+  - **Plane Pivot Controls**: View grid projections along **XY**, **XZ**, and **YZ** axes.
+  - **Layer Shift**: Navigate forward and backward through layers.
+  - **Active Box Context**: Display all 3D layers of the selected sub-box simultaneously.
+- **Sudoku Generation**:
+  - Sudoku generator for 2d and 3d puzzles in the browser and through a cli.
 
-## GitHub Pages Deployment
+## Generalization Logic
 
-To host on GitHub Pages:
-1. Push this repository to GitHub.
-2. In your repository settings under **Pages**, select `main` branch and root `/` folder as the source.
-3. Your app will be live at `https://<your-username>.github.io/<repository-name>/`.
+Sudoku is generalized using two parameters: **Base ($b$)** and **Dimension ($D$)**.
+
+### Derived Formulas
+- **Side Length & Symbol Count ($N$)**: $N(b, D) = b^D$
+- **Sub-box Volume**: $V_{\text{box}}(b, D) = b^D = N$ (with dimensions $b \times \dots \times b$)
+- **Total Grid Cells**: $V_{\text{grid}}(b, D) = N^D = b^{D^2}$
+- **Sub-box Count**: $C_{\text{box}}(b, D) = \frac{V_{\text{grid}}}{V_{\text{box}}} = b^{D(D-1)}$
+
+### Constraint Rules
+- **Orthogonal Constraints**: Every 1D line of length $N$ along any coordinate axis (holding all other $D-1$ coordinates constant) must contain each symbol exactly once.
+- **Sub-box Constraints**: Every $D$-dimensional sub-box of volume $b^D$ must contain each symbol exactly once.
+
+### Configurations
+- **2D Shi-Doku** ($b=2, D=2$): $N=4$ ($4 \times 4$ grid, $2 \times 2$ sub-boxes, 4 sub-boxes, symbols $1\dots4$).
+- **2D Classic** ($b=3, D=2$): $N=9$ ($9 \times 9$ grid, $3 \times 3$ sub-boxes, 9 sub-boxes, symbols $1\dots9$).
+- **2D Hexadecimal** ($b=4, D=2$): $N=16$ ($16 \times 16$ grid, $4 \times 4$ sub-boxes, 16 sub-boxes, symbols $0\dots\text{F}$).
+- **3D Cube** ($b=2, D=3$): $N=8$ ($8 \times 8 \times 8$ grid, $2 \times 2 \times 2$ sub-boxes, 64 sub-boxes, symbols $1\dots8$).
+
+## Controls
+
+### Navigation & Selection
+- **Click**: Select cell on the board or auxiliary box view.
+- **Arrow Keys**: Move cell selection.
+- **Escape**: Deselect cell or clear digit highlights.
+
+### Input & Editing
+- **1–9 / 0–F**: Input digit or candidate note (0–F for 16x16 grid).
+- **Backspace / Delete**: Clear cell.
+- **M**: Switch to Entry Mode.
+- **N**: Switch to Notation Mode.
+- **V**: Set Notation Mode to Green (valid candidate).
+- **I**: Set Notation Mode to Red (invalid candidate).
+- **H**: Toggle Hold Highlight for selected digit.
+
+### 3D Navigation
+- **XY / XZ / YZ**: Pivot view plane.
+- **Shift Up / Down**: Step forward or backward through 3D layers.
+
+### History
+- **Z**: Undo.
+- **Y**: Redo.
 
 ## Local Development
 
-To run locally using Python's static HTTP server:
+Run locally using Python's static HTTP server:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-Then open `http://localhost:8000` in your web browser.
+Open `http://localhost:8000` in a web browser.
 
 ## Running Tests
 
-Run the automated Node.js unit test suite:
+Run the Node.js unit test suite:
 
 ```bash
 npm test
@@ -50,7 +78,7 @@ npm test
 
 ## Batch CLI Puzzle Generation
 
-Batch generate puzzles offline via command line:
+Generate puzzles via the command line:
 
 ```bash
 # Generate 1 medium 3x2 classic puzzle (default)
