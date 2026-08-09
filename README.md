@@ -16,9 +16,10 @@ A sleek, standalone Progressive Web App (PWA) for playing 2D and 3D multi-dimens
   - **Entry Mode (Key `M`)**: Directly enter numbers.
   - **Notation Mode (Key `N`)**: Add custom valid (Green, key `V`) or invalid (Red, key `I`) digit candidates.
   - **Hold Highlight (Key `H`)**: Lock digit selection for fast identification across the entire board.
-- **In-Browser DLX Generator Engine**:
+- **In-Browser & Node DLX Generator Engine**:
   - Asynchronous Web Worker puzzle generator powered by Knuth's **Dancing Links (DLX)** exact cover matrix algorithm.
   - **Max Removal Mode (`-1`)**: Attempt clue removals until a minimal uniquely-solvable puzzle state is reached.
+  - **Offline CLI Tool**: Command-line generator script for batch puzzle creation.
 - **Full History**: Undo (`Z`) & Redo (`Y`) state stack.
 - **File Management**: Load bundled puzzles, upload custom `.json` puzzles, generate custom puzzles, and export saved progress.
 
@@ -45,4 +46,16 @@ Run the automated Node.js unit test suite:
 
 ```bash
 npm test
+```
+
+## Batch CLI Puzzle Generation
+
+Batch generate puzzles offline via command line:
+
+```bash
+# Generate 1 medium 3x2 classic puzzle (default)
+npm run generate
+
+# Generate 5 hard 2x3 3D hyper-cube puzzles saved to puzzles/ directory
+npm run generate -- --preset 2x3 --difficulty high --count 5 --outDir puzzles
 ```
