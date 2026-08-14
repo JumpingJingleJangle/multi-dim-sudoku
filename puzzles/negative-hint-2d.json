@@ -1,0 +1,242 @@
+{
+  "id": "negative-hint-2d",
+  "metadata": {
+    "name": "Negative Candidate Shi-Doku (2x2)",
+    "base": 2,
+    "dimension": 2,
+    "difficulty": "Max",
+    "strategy": "negative_hint_spread",
+    "author": "Spread Negative Hint Engine",
+    "id": "negative-hint-2d"
+  },
+  "initial_state": [
+    {
+      "y": 0,
+      "x": 0,
+      "notations": {
+        "red": [
+          "2"
+        ]
+      }
+    },
+    {
+      "y": 2,
+      "x": 1,
+      "notations": {
+        "red": [
+          "4"
+        ]
+      }
+    },
+    {
+      "y": 1,
+      "x": 2,
+      "notations": {
+        "red": [
+          "2",
+          "1"
+        ]
+      }
+    },
+    {
+      "y": 3,
+      "x": 3,
+      "notations": {
+        "red": [
+          "2"
+        ]
+      }
+    },
+    {
+      "y": 0,
+      "x": 1,
+      "notations": {
+        "red": [
+          "3"
+        ]
+      }
+    },
+    {
+      "y": 1,
+      "x": 3,
+      "notations": {
+        "red": [
+          "1",
+          "2"
+        ]
+      }
+    },
+    {
+      "y": 0,
+      "x": 2,
+      "notations": {
+        "red": [
+          "2"
+        ]
+      }
+    },
+    {
+      "y": 0,
+      "x": 3,
+      "notations": {
+        "red": [
+          "4"
+        ]
+      }
+    },
+    {
+      "y": 2,
+      "x": 3,
+      "notations": {
+        "red": [
+          "3"
+        ]
+      }
+    },
+    {
+      "y": 1,
+      "x": 0,
+      "notations": {
+        "red": [
+          "4"
+        ]
+      }
+    },
+    {
+      "y": 1,
+      "x": 1,
+      "notations": {
+        "red": [
+          "3"
+        ]
+      }
+    },
+    {
+      "y": 3,
+      "x": 1,
+      "notations": {
+        "red": [
+          "2"
+        ]
+      }
+    },
+    {
+      "y": 2,
+      "x": 0,
+      "notations": {
+        "red": [
+          "3"
+        ]
+      }
+    },
+    {
+      "y": 2,
+      "x": 2,
+      "notations": {
+        "red": [
+          "3"
+        ]
+      }
+    },
+    {
+      "y": 3,
+      "x": 0,
+      "notations": {
+        "red": [
+          "4"
+        ]
+      }
+    },
+    {
+      "y": 3,
+      "x": 2,
+      "notations": {
+        "red": [
+          "3"
+        ]
+      }
+    }
+  ],
+  "master_solution": [
+    {
+      "value": 3,
+      "y": 0,
+      "x": 0
+    },
+    {
+      "value": 3,
+      "y": 2,
+      "x": 1
+    },
+    {
+      "value": 3,
+      "y": 1,
+      "x": 2
+    },
+    {
+      "value": 3,
+      "y": 3,
+      "x": 3
+    },
+    {
+      "value": 4,
+      "y": 0,
+      "x": 1
+    },
+    {
+      "value": 4,
+      "y": 1,
+      "x": 3
+    },
+    {
+      "value": 1,
+      "y": 0,
+      "x": 2
+    },
+    {
+      "value": 2,
+      "y": 0,
+      "x": 3
+    },
+    {
+      "value": 1,
+      "y": 2,
+      "x": 3
+    },
+    {
+      "value": 1,
+      "y": 1,
+      "x": 0
+    },
+    {
+      "value": 2,
+      "y": 1,
+      "x": 1
+    },
+    {
+      "value": 1,
+      "y": 3,
+      "x": 1
+    },
+    {
+      "value": 4,
+      "y": 2,
+      "x": 0
+    },
+    {
+      "value": 2,
+      "y": 2,
+      "x": 2
+    },
+    {
+      "value": 2,
+      "y": 3,
+      "x": 0
+    },
+    {
+      "value": 4,
+      "y": 3,
+      "x": 2
+    }
+  ]
+}

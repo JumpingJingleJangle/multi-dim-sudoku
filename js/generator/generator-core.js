@@ -208,11 +208,12 @@ export function generateFullPuzzle(base, dim) {
 
 // Constraint Solver & Clue Digging Engine
 export class ConstraintSolver {
-    constructor(stateMap, base, dimension) {
+    constructor(stateMap, base, dimension, redNotationsMap = new Map()) {
         this.base = base;
         this.dimension = dimension;
         this.N = base ** dimension;
         this.stateMap = new Map(stateMap);
+        this.redNotationsMap = redNotationsMap;
 
         this.squares = [];
         this.generateSquares([], 0);
@@ -317,9 +318,13 @@ export class ConstraintSolver {
             let key = c.join(',');
             let fixedVal = this.stateMap.get(key);
             let hasVal = fixedVal !== null && fixedVal !== undefined;
+            let redSet = this.redNotationsMap ? this.redNotationsMap.get(key) : null;
+
             for (let v = 1; v <= n; v++) {
                 let cellVal = getSymbol(v, base);
                 if (hasVal && String(fixedVal) !== String(cellVal)) continue;
+                if (!hasVal && redSet && (redSet.has(cellVal) || redSet.has(String(cellVal)) || redSet.has(v))) continue;
+
                 let rowCols = [`Cell_${c.join(',')}`];
                 for (let axis = 0; axis < dim; axis++) {
                     let fc = [...c];
@@ -337,6 +342,207 @@ export class ConstraintSolver {
     }
 }
 
+export function canSolveWithSinglesOnly(stateMap, base, dim, redNotationsMap = new Map()) {
+    const N = base ** dim;
+    let workMap = new Map(stateMap);
+    let solver = new ConstraintSolver(workMap, base, dim);
+    let emptySet = new Set();
+    solver.squares.forEach(sq => {
+        let key = sq.join(',');
+        let v = workMap.get(key);
+        if (v === null || v === undefined) emptySet.add(key);
+    });
+
+    let progress = true;
+    while (progress && emptySet.size > 0) {
+        progress = false;
+        for (let key of Array.from(emptySet)) {
+            let usedValues = new Set();
+            let peers = solver.peers.get(key);
+            if (peers) {
+                for (let pKey of peers) {
+                    let v = workMap.get(pKey);
+                    if (v !== null && v !== undefined) usedValues.add(String(v));
+                }
+            }
+            if (redNotationsMap.has(key)) {
+                let redSet = redNotationsMap.get(key);
+                redSet.forEach(rv => usedValues.add(String(rv)));
+            }
+
+            let valid = [];
+            for (let v = 1; v <= N; v++) {
+                let sym = String(getSymbol(v, base));
+                if (!usedValues.has(sym)) valid.push(sym);
+            }
+
+            if (valid.length === 1) {
+                workMap.set(key, valid[0]);
+                emptySet.delete(key);
+                progress = true;
+                break;
+            }
+        }
+    }
+
+    return emptySet.size === 0;
+}
+
+export function processDiggingByNegativeHintReduction(fullPuzzle, options = {}) {
+    const meta = fullPuzzle.metadata;
+    const base = meta.base;
+    const dim = meta.dimension;
+    const n = base ** dim;
+
+    let masterMap = new Map();
+    fullPuzzle.initial_state.forEach(cell => {
+        let key = dim === 3 ? `${cell.z},${cell.y},${cell.x}` : `${cell.y},${cell.x}`;
+        masterMap.set(key, cell.value);
+    });
+
+    let dummySolver = new ConstraintSolver(masterMap, base, dim);
+    let peersMap = dummySolver.peers;
+
+    let digitsList = Array.from({ length: n }, (_, i) => String(getSymbol(i + 1, base)));
+
+    // Initialize every cell C with full negative hint set R(C) = digits \ {V_C}
+    let redNotationsMap = new Map();
+    masterMap.forEach((val, key) => {
+        let masterVal = String(val);
+        let nonMaster = digitsList.filter(d => d !== masterVal);
+        redNotationsMap.set(key, new Set(nonMaster));
+    });
+
+    // Helper: calculate candidate entropy H(C) = log2(N - |R(C)|)
+    function getCellEntropy(key) {
+        let hints = redNotationsMap.get(key);
+        let candCount = n - (hints ? hints.size : 0);
+        return Math.log2(Math.max(1, candCount));
+    }
+
+    let isSpread = options.strategy === 'negative_hint_spread';
+
+    // Helper: calculate weight for peeling hint D from cell C
+    function getHintRemovalWeight(cellKey, hintVal) {
+        let currentHints = redNotationsMap.get(cellKey);
+        let candCount = n - currentHints.size;
+        let deltaH = Math.log2(candCount + 1) - Math.log2(candCount);
+
+        let peerEntropySum = 0;
+        let peers = peersMap.get(cellKey);
+        if (peers) {
+            peers.forEach(pKey => {
+                peerEntropySum += getCellEntropy(pKey);
+            });
+        }
+        let baseWeight = deltaH + peerEntropySum + (Math.random() * 0.4);
+
+        if (isSpread) {
+            let k = (n - 1) - currentHints.size; // hints already peeled from cellKey
+            let penalty = 1.0 / (1.0 + 2.5 * (k * k));
+            baseWeight *= penalty;
+        }
+
+        return baseWeight;
+    }
+
+    let isMaxMode = options.removals !== undefined && options.removals < 0;
+    let targetRemovals = isMaxMode ? (dim === 3 ? 512 * (n - 1) : (n * n * (n - 1))) : (options.removals !== undefined ? options.removals : (dim === 3 ? 120 : (n === 4 ? 8 : 40)));
+    let minHintsPerDugCell = options.minRedHints !== undefined ? options.minRedHints : 1;
+
+    let removedHintCount = 0;
+    let lockedHints = new Set();
+
+    while (removedHintCount < targetRemovals) {
+        let availablePairs = [];
+        redNotationsMap.forEach((hintSet, key) => {
+            if (hintSet.size > minHintsPerDugCell) {
+                hintSet.forEach(hintVal => {
+                    let pairId = `${key}:${hintVal}`;
+                    if (!lockedHints.has(pairId)) {
+                        availablePairs.push({ key, hintVal, pairId });
+                    }
+                });
+            }
+        });
+
+        if (availablePairs.length === 0) break;
+
+        // Sample up to 50 unlocked candidate pairs for entropy weighting
+        let sampleSize = Math.min(50, availablePairs.length);
+        let sampleSubPool = [...availablePairs].sort(() => Math.random() - 0.5).slice(0, sampleSize);
+
+        sampleSubPool.forEach(pair => {
+            pair.weight = getHintRemovalWeight(pair.key, pair.hintVal);
+        });
+
+        sampleSubPool.sort((a, b) => b.weight - a.weight);
+        let selectedPair = sampleSubPool[0];
+
+        let cellKey = selectedPair.key;
+        let hintVal = selectedPair.hintVal;
+
+        redNotationsMap.get(cellKey).delete(hintVal);
+
+        let stateMap = new Map();
+        masterMap.forEach((masterVal, key) => {
+            let hints = redNotationsMap.get(key);
+            if (hints && hints.size === n - 1) {
+                stateMap.set(key, masterVal);
+            } else {
+                stateMap.set(key, null);
+            }
+        });
+
+        let solver = new ConstraintSolver(stateMap, base, dim, redNotationsMap);
+        let res = solver.solve();
+
+        if (!res.solvable) {
+            redNotationsMap.get(cellKey).add(hintVal);
+            lockedHints.add(selectedPair.pairId);
+        } else {
+            removedHintCount++;
+            if (!isMaxMode && !canSolveWithSinglesOnly(stateMap, base, dim, redNotationsMap)) {
+                break;
+            }
+        }
+    }
+
+    let playableInitial = [];
+    masterMap.forEach((masterVal, key) => {
+        let hints = redNotationsMap.get(key);
+        let parts = key.split(',').map(Number);
+        let cellObj = {};
+        if (dim === 2) { cellObj.y = parts[0]; cellObj.x = parts[1]; }
+        else if (dim === 3) { cellObj.z = parts[0]; cellObj.y = parts[1]; cellObj.x = parts[2]; }
+
+        if (hints.size === n - 1) {
+            cellObj.value = masterVal;
+            playableInitial.push(cellObj);
+        } else if (hints.size > 0) {
+            cellObj.notations = { red: Array.from(hints) };
+            playableInitial.push(cellObj);
+        }
+    });
+
+    const puzzleName = options.name || `${dim}D Base ${base} Negative Hint Dig Puzzle`;
+    const puzzleId = `hint-dig-${Math.random().toString(36).substring(2, 10)}`;
+
+    return {
+        id: puzzleId,
+        metadata: {
+            name: puzzleName,
+            base: base,
+            dimension: dim,
+            difficulty: options.difficulty || "Negative Hint Dig",
+            strategy: options.strategy || "negative_hint_dig",
+            author: "In-Browser JS Engine"
+        },
+        initial_state: playableInitial,
+        master_solution: fullPuzzle.initial_state
+    };
+}
+
 export function processDigging(fullPuzzle, options = {}) {
     const meta = fullPuzzle.metadata;
     const base = meta.base;
@@ -345,6 +551,10 @@ export function processDigging(fullPuzzle, options = {}) {
     const isMaxMode = options.removals !== undefined && options.removals < 0;
     const targetRemovals = isMaxMode ? (dim === 3 ? 512 : n * n) : (options.removals !== undefined ? options.removals : (dim === 3 ? 120 : (n === 4 ? 6 : (n === 16 ? 80 : 40))));
     const strategy = options.strategy || 'weighted';
+
+    if (strategy === 'negative_hint_dig' || strategy === 'negative_hint_spread') {
+        return processDiggingByNegativeHintReduction(fullPuzzle, options);
+    }
 
     let stateMap = new Map();
     fullPuzzle.initial_state.forEach(cell => {

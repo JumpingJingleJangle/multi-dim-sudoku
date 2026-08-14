@@ -25,6 +25,29 @@ describe('SudokuGame Core Engine Tests', () => {
         assert.strictEqual(game.board[0][0][1], 3);
     });
 
+    test('Pre-filled Negative Notations Loading and Protection', () => {
+        const game = new SudokuGame();
+        const dummyPuzzleWithNotations = {
+            metadata: { name: "Test Red Notations", base: 2, dimension: 2 },
+            initial_state: [
+                { z: 0, y: 0, x: 0, notations: { red: [1, 2] } }
+            ]
+        };
+        game.initialize(dummyPuzzleWithNotations);
+        assert.strictEqual(game.notations[0][0][0].red.has(1), true);
+        assert.strictEqual(game.notations[0][0][0].red.has(2), true);
+        assert.strictEqual(game.isPresetNotation(0, 0, 0, 'red', 1), true);
+        assert.strictEqual(game.isPresetNotation(0, 0, 0, 'red', '1'), true);
+
+        // Attempting to toggle off preset notation 1 should NOT delete it
+        game.execute({ type: 'notation', z: 0, y: 0, x: 0, color: 'red', val: 1, added: false });
+        assert.strictEqual(game.hasActiveNotation(0, 0, 0, 'red', 1), true);
+
+        // Attempting to add duplicate notation '1' should NOT create duplicates
+        game.execute({ type: 'notation', z: 0, y: 0, x: 0, color: 'red', val: '1', added: true });
+        assert.strictEqual(game.notations[0][0][0].red.size, 2);
+    });
+
     test('Conflict Detection in 2D', () => {
         const game = new SudokuGame();
         const dummy2DPuzzle = {

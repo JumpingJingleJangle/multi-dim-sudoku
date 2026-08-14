@@ -519,7 +519,8 @@ export class SudokuApp {
             const isFilledCell = this.game.board[z][y][x] !== null && this.game.board[z][y][x] !== undefined;
             if (isFilledCell) return;
             const color = this.currentNotationColor;
-            const hasNote = this.game.notations[z][y][x][color].has(val);
+            if (this.game.isPresetNotation(z, y, x, color, val)) return;
+            const hasNote = this.game.hasActiveNotation(z, y, x, color, val);
             this.game.execute({ type: 'notation', z, y, x, color, val, added: !hasNote });
         }
         this.ui.updateCellVisual(this.game, z, y, x);

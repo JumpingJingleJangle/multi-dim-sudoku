@@ -101,4 +101,49 @@ describe('In-Browser Generator Engine Tests', () => {
         assert.strictEqual(statuses[0], 'Generating solution matrix...');
         assert.strictEqual(statuses[1], 'Digging clues for playable puzzle...');
     });
+
+    test('Negative Hint Reduction Digging Engine (strategy: negative_hint_dig)', () => {
+        const fullPuzzle = generateFullPuzzle(2, 2);
+        const playable = processDigging(fullPuzzle, { strategy: 'negative_hint_dig', name: 'Negative Hint Dig 2x2' });
+        assert.ok(playable);
+        assert.strictEqual(playable.metadata.strategy, 'negative_hint_dig');
+
+        // Check that initial_state contains given clues OR notations.red
+        let hasGivenClues = playable.initial_state.some(c => c.value !== undefined);
+        let hasRedNotations = playable.initial_state.some(c => c.notations && c.notations.red && c.notations.red.length > 0);
+        assert.ok(hasGivenClues || hasRedNotations, 'Puzzle MUST contain given clues or red notations');
+
+        // Verify unique solvability
+        let stateMap = new Map();
+        let redNotationsMap = new Map();
+        playable.initial_state.forEach(c => {
+            let key = `${c.y},${c.x}`;
+            if (c.value !== undefined) stateMap.set(key, c.value);
+            if (c.notations && c.notations.red) redNotationsMap.set(key, new Set(c.notations.red));
+        });
+        const solver = new ConstraintSolver(stateMap, 2, 2, redNotationsMap);
+        const res = solver.solve();
+        assert.strictEqual(res.solvable, true, 'Negative hint dig puzzle MUST be uniquely solvable');
+    });
+
+    test('Spread-Out Negative Hint Reduction Engine (strategy: negative_hint_spread)', () => {
+        const fullPuzzle = generateFullPuzzle(2, 2);
+        const playable = processDigging(fullPuzzle, { strategy: 'negative_hint_spread', name: 'Spread Negative Hint Dig 2x2' });
+        assert.ok(playable);
+        assert.strictEqual(playable.metadata.strategy, 'negative_hint_spread');
+
+        let partialHintCells = playable.initial_state.filter(c => c.notations && c.notations.red && c.notations.red.length > 0);
+        assert.ok(partialHintCells.length > 0, 'Spread-out strategy MUST create partial hint cells');
+
+        let stateMap = new Map();
+        let redNotationsMap = new Map();
+        playable.initial_state.forEach(c => {
+            let key = `${c.y},${c.x}`;
+            if (c.value !== undefined) stateMap.set(key, c.value);
+            if (c.notations && c.notations.red) redNotationsMap.set(key, new Set(c.notations.red));
+        });
+        const solver = new ConstraintSolver(stateMap, 2, 2, redNotationsMap);
+        const res = solver.solve();
+        assert.strictEqual(res.solvable, true, 'Spread-out negative hint puzzle MUST be uniquely solvable');
+    });
 });

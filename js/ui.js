@@ -4,7 +4,7 @@
  * numpad construction, highlights, toast popups, and modals.
  */
 
-import { formatDigit } from './utils.js';
+import { formatDigit, parseDigit } from './utils.js';
 
 export class SudokuUI {
     constructor() {
@@ -144,21 +144,38 @@ export class SudokuUI {
             const notDiv = document.createElement("div");
             notDiv.className = "notations-list";
 
-            const gNotes = Array.from(game.notations[z][y][x].green).sort();
-            const rNotes = Array.from(game.notations[z][y][x].red).sort();
+            const sortNotes = (arr) => {
+                let strMap = new Map();
+                Array.from(arr).forEach(v => {
+                    let key = String(v);
+                    if (!strMap.has(key)) strMap.set(key, v);
+                });
+                return Array.from(strMap.values()).sort((a, b) => parseDigit(a) - parseDigit(b));
+            };
+            const gNotes = sortNotes(game.notations[z][y][x].green);
+            const rNotes = sortNotes(game.notations[z][y][x].red);
 
             if (gNotes.length > 0) {
                 const gGroup = document.createElement("div");
                 gGroup.className = "note-group note-green";
-                gGroup.innerHTML = gNotes.map(n => `<span class="note-val" data-note="${n}">${formatDigit(n)}</span>`).join(", ");
+                gGroup.innerHTML = gNotes.map(n => {
+                    const isPreset = game.isPresetNotation ? game.isPresetNotation(z, y, x, 'green', n) : false;
+                    const cls = isPreset ? 'note-val note-preset note-green' : 'note-val note-user note-green';
+                    return `<span class="${cls}" data-note="${n}">${formatDigit(n)}</span>`;
+                }).join(", ");
                 notDiv.appendChild(gGroup);
             }
             if (rNotes.length > 0) {
                 const rGroup = document.createElement("div");
                 rGroup.className = "note-group note-red";
-                rGroup.innerHTML = rNotes.map(n => `<span class="note-val" data-note="${n}">${formatDigit(n)}</span>`).join(", ");
+                rGroup.innerHTML = rNotes.map(n => {
+                    const isPreset = game.isPresetNotation ? game.isPresetNotation(z, y, x, 'red', n) : false;
+                    const cls = isPreset ? 'note-val note-preset note-red' : 'note-val note-user note-red';
+                    return `<span class="${cls}" data-note="${n}">${formatDigit(n)}</span>`;
+                }).join(", ");
                 notDiv.appendChild(rGroup);
             }
+
             cell.appendChild(notDiv);
         }
     }
@@ -227,8 +244,20 @@ export class SudokuUI {
                         cell.style.justifyContent = "center";
 
                         let html = "";
-                        if (gNotes.length > 0) html += `<div style="color:var(--notation-green)">${gNotes.map(n => formatDigit(n)).join(",")}</div>`;
-                        if (rNotes.length > 0) html += `<div style="color:var(--notation-red)">${rNotes.map(n => formatDigit(n)).join(",")}</div>`;
+                        if (gNotes.length > 0) {
+                            html += `<div style="color:var(--notation-green)">${gNotes.map(n => {
+                                const isPreset = game.isPresetNotation ? game.isPresetNotation(z, y, x, 'green', n) : false;
+                                const cls = isPreset ? 'note-val note-preset note-green' : 'note-val note-user note-green';
+                                return `<span class="${cls}" data-note="${n}">${formatDigit(n)}</span>`;
+                            }).join(",")}</div>`;
+                        }
+                        if (rNotes.length > 0) {
+                            html += `<div style="color:var(--notation-red)">${rNotes.map(n => {
+                                const isPreset = game.isPresetNotation ? game.isPresetNotation(z, y, x, 'red', n) : false;
+                                const cls = isPreset ? 'note-val note-preset note-red' : 'note-val note-user note-red';
+                                return `<span class="${cls}" data-note="${n}">${formatDigit(n)}</span>`;
+                            }).join(",")}</div>`;
+                        }
                         cell.innerHTML = html;
                     }
 
@@ -383,8 +412,12 @@ export class SudokuUI {
 
     updateHighlights(game, identifiedNumber) {
         document.querySelectorAll(".cell.identified").forEach(el => el.classList.remove("identified"));
-        document.querySelectorAll(".note-val.identified-note").forEach(el => el.classList.remove("identified-note"));
-        document.querySelectorAll(".cell.identified-aux-note").forEach(el => el.classList.remove("identified-aux-note"));
+        document.querySelectorAll(".note-val.identified-note, .note-val.identified-note-green, .note-val.identified-note-red").forEach(el => {
+            el.classList.remove("identified-note", "identified-note-green", "identified-note-red");
+        });
+        document.querySelectorAll(".cell.identified-aux-note, .cell.identified-cell-green, .cell.identified-cell-red, .cell.identified-cell-warning").forEach(el => {
+            el.classList.remove("identified-aux-note", "identified-cell-green", "identified-cell-red", "identified-cell-warning");
+        });
 
         if (identifiedNumber === null || identifiedNumber === undefined) return;
 
@@ -404,13 +437,23 @@ export class SudokuUI {
             if (activeVal !== null && String(activeVal) === String(identifiedNumber)) {
                 cell.classList.add("identified");
             } else if (activeVal === null) {
-                const hasNote = game.notations[z][y][x].green.has(identifiedNumber) || game.notations[z][y][x].red.has(identifiedNumber);
-                if (hasNote) {
-                    const noteSpan = cell.querySelector(`.note-val[data-note="${identifiedNumber}"]`);
-                    if (noteSpan) noteSpan.classList.add("identified-note");
-                    if (cell.querySelector('div[style*="color:var(--notation-"]') || cell.classList.contains('identified-aux-note')) {
-                        cell.classList.add("identified-aux-note");
-                    }
+                const hasGreen = game.hasActiveNotation ? game.hasActiveNotation(z, y, x, 'green', identifiedNumber) : game.notations[z][y][x].green.has(identifiedNumber);
+                const hasRed = game.hasActiveNotation ? game.hasActiveNotation(z, y, x, 'red', identifiedNumber) : game.notations[z][y][x].red.has(identifiedNumber);
+
+                if (hasGreen && hasRed) {
+                    const noteSpansG = cell.querySelectorAll(`.note-val.note-green[data-note="${identifiedNumber}"]`);
+                    const noteSpansR = cell.querySelectorAll(`.note-val.note-red[data-note="${identifiedNumber}"]`);
+                    noteSpansG.forEach(sp => sp.classList.add("identified-note-green"));
+                    noteSpansR.forEach(sp => sp.classList.add("identified-note-red"));
+                    cell.classList.add("identified-cell-warning");
+                } else if (hasGreen) {
+                    const noteSpans = cell.querySelectorAll(`.note-val.note-green[data-note="${identifiedNumber}"]`);
+                    noteSpans.forEach(sp => sp.classList.add("identified-note-green"));
+                    cell.classList.add("identified-cell-green");
+                } else if (hasRed) {
+                    const noteSpans = cell.querySelectorAll(`.note-val.note-red[data-note="${identifiedNumber}"]`);
+                    noteSpans.forEach(sp => sp.classList.add("identified-note-red"));
+                    cell.classList.add("identified-cell-red");
                 }
             }
         });

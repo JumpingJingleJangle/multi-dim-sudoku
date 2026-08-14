@@ -1,5 +1,16 @@
 [
   {
+    "id": "negative-hint-2d",
+    "filename": "negative-hint-2d.json",
+    "metadata": {
+      "name": "Negative Candidate Shi-Doku (2x2)",
+      "difficulty": "Max",
+      "base": 2,
+      "dimension": 2,
+      "author": "Spread Negative Hint Engine"
+    }
+  },
+  {
     "id": "base2-3d-test",
     "filename": "base2-3d-test.json",
     "metadata": {

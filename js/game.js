@@ -40,6 +40,7 @@ export class SudokuGame {
         this.board = Array(this.nz).fill(null).map(() => Array(this.ny).fill(null).map(() => Array(this.nx).fill(null)));
         this.initialBoard = Array(this.nz).fill(null).map(() => Array(this.ny).fill(null).map(() => Array(this.nx).fill(null)));
         this.notations = Array(this.nz).fill(null).map(() => Array(this.ny).fill(null).map(() => Array(this.nx).fill(null).map(() => ({ green: new Set(), red: new Set() }))));
+        this.initialNotations = Array(this.nz).fill(null).map(() => Array(this.ny).fill(null).map(() => Array(this.nx).fill(null).map(() => ({ green: new Set(), red: new Set() }))));
 
         if (puzzle.initial_state) {
             puzzle.initial_state.forEach(cell => {
@@ -48,6 +49,16 @@ export class SudokuGame {
                     if (cell.value !== null && cell.value !== undefined) {
                         this.initialBoard[z][cell.y][cell.x] = cell.value;
                         this.board[z][cell.y][cell.x] = cell.value;
+                    }
+                    if (cell.notations) {
+                        if (cell.notations.green) cell.notations.green.forEach(v => {
+                            this.notations[z][cell.y][cell.x].green.add(v);
+                            this.initialNotations[z][cell.y][cell.x].green.add(v);
+                        });
+                        if (cell.notations.red) cell.notations.red.forEach(v => {
+                            this.notations[z][cell.y][cell.x].red.add(v);
+                            this.initialNotations[z][cell.y][cell.x].red.add(v);
+                        });
                     }
                 }
             });
@@ -67,6 +78,23 @@ export class SudokuGame {
         }
     }
 
+    hasNotation(setObj, val) {
+        if (!setObj) return false;
+        let sVal = String(val);
+        let nVal = Number(val);
+        return setObj.has(val) || setObj.has(sVal) || (!isNaN(nVal) && setObj.has(nVal));
+    }
+
+    isPresetNotation(z, y, x, color, val) {
+        if (!this.initialNotations || !this.initialNotations[z] || !this.initialNotations[z][y] || !this.initialNotations[z][y][x]) return false;
+        return this.hasNotation(this.initialNotations[z][y][x][color], val);
+    }
+
+    hasActiveNotation(z, y, x, color, val) {
+        if (!this.notations || !this.notations[z] || !this.notations[z][y] || !this.notations[z][y][x]) return false;
+        return this.hasNotation(this.notations[z][y][x][color], val);
+    }
+
     execute(cmd, isRedo = false) {
         if (!isRedo) {
             this.undoStack.push(cmd);
@@ -83,12 +111,23 @@ export class SudokuGame {
                 this.notations[z][y][x].red = new Set(cmd.oldRed);
             }
         } else if (cmd.type === 'notation') {
-            if (cmd.added) this.notations[z][y][x][cmd.color].add(cmd.val);
-            else this.notations[z][y][x][cmd.color].delete(cmd.val);
+            let sVal = String(cmd.val);
+            if (cmd.added) {
+                // Don't add duplicate if already present in string/number form
+                if (!this.hasActiveNotation(z, y, x, cmd.color, cmd.val)) {
+                    this.notations[z][y][x][cmd.color].add(cmd.val);
+                }
+            } else {
+                if (!this.isPresetNotation(z, y, x, cmd.color, cmd.val)) {
+                    this.notations[z][y][x][cmd.color].delete(cmd.val);
+                    this.notations[z][y][x][cmd.color].delete(sVal);
+                    if (!isNaN(Number(cmd.val))) this.notations[z][y][x][cmd.color].delete(Number(cmd.val));
+                }
+            }
         } else if (cmd.type === 'clear_all') {
             this.board[z][y][x] = null;
-            this.notations[z][y][x].green.clear();
-            this.notations[z][y][x].red.clear();
+            this.notations[z][y][x].green = new Set(this.initialNotations[z][y][x].green);
+            this.notations[z][y][x].red = new Set(this.initialNotations[z][y][x].red);
         }
         return { z, y, x };
     }

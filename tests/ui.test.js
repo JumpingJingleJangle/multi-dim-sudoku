@@ -133,4 +133,44 @@ describe('SudokuUI & DOM Integration Tests', () => {
         assert.ok(btnRed.classList.contains('active'));
         assert.strictEqual(btnGreen.classList.contains('active'), false);
     });
+
+    test('Preset Negative Hint Highlighting in Normal and Hold Mode', () => {
+        const app = new SudokuApp();
+        const dummyPuzzleWithPreset = {
+            metadata: { name: "Test Highlight Preset", base: 2, dimension: 2 },
+            initial_state: [
+                { z: 0, y: 0, x: 0, notations: { red: [1, 2] } }
+            ]
+        };
+        app.initializePuzzle(dummyPuzzleWithPreset);
+
+        // Verify note-preset class exists on span element
+        const cell = app.ui.boardEl.querySelector('.cell[data-z="0"][data-y="0"][data-x="0"]');
+        assert.ok(cell, 'Cell MUST exist');
+        const presetSpan = cell.querySelector('.note-val.note-preset.note-red[data-note="1"]');
+        assert.ok(presetSpan, 'Preset red note span MUST have note-preset and note-red classes');
+
+        // Test normal highlight mode
+        app.identifiedNumber = 1;
+        app.refreshStatus();
+        assert.ok(presetSpan.classList.contains('identified-note-red'), 'Preset red span MUST receive identified-note-red class when number 1 is identified');
+        assert.ok(cell.classList.contains('identified-cell-red'), 'Cell container MUST receive identified-cell-red class');
+
+        // Test hold highlight mode
+        app.toggleHoldHighlight();
+        assert.strictEqual(app.state.isIdentifyHold, true);
+        assert.strictEqual(app.state.identifiedNumber, 1);
+        assert.ok(presetSpan.classList.contains('identified-note-red'), 'Preset red span MUST remain identified in hold mode');
+
+        // Test notation contradiction yellow highlight during number identification
+        app.game.notations[0][0][0].green.add(1);
+        app.identifiedNumber = null;
+        app.refreshAll();
+        const updatedCell = app.ui.boardEl.querySelector('.cell[data-z="0"][data-y="0"][data-x="0"]');
+        assert.strictEqual(updatedCell.classList.contains('identified-cell-warning'), false, 'Cell MUST NOT be highlighted yellow when no number is identified');
+
+        app.identifiedNumber = 1;
+        app.refreshStatus();
+        assert.ok(updatedCell.classList.contains('identified-cell-warning'), 'Cell with both green and red notation 1 MUST receive identified-cell-warning class when number 1 is identified');
+    });
 });

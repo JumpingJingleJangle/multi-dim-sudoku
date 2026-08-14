@@ -12,7 +12,26 @@ A web application for playing generalizations of Sudoku allowing for 3d puzzles 
   - **Layer Shift**: Navigate forward and backward through layers.
   - **Active Box Context**: Display all 3D layers of the selected sub-box simultaneously.
 - **Sudoku Generation**:
-  - Sudoku generator for 2d and 3d puzzles in the browser and through a cli.
+  - Sudoku generator for 2D and 3D puzzles in the browser and through a CLI.
+  - **Negative Candidate / Elimination Sudoku**: Novel puzzle construction engine that generates puzzles with pre-filled negative red hints instead of positive given digits.
+
+## Negative Candidate / Elimination Sudoku Variant
+
+In traditional Sudoku, puzzle construction provides **positive clues** (given numbers specifying what a cell *must* contain). 
+
+In **Negative Candidate (or Elimination) Sudoku**, puzzle construction operates in negative space:
+- Puzzles are initialized with **pre-filled negative hints** (red notes) indicating values that a cell **cannot** contain.
+- Players deduce cell values by combining set eliminations across intersecting rows, columns, and sub-boxes.
+- **Protection**: Pre-filled negative hints loaded from the initial puzzle state are immutable constraints and cannot be cleared or toggled off during play.
+- **Deduplicated & Ordered Display**: Pre-filled preset hints are rendered in bold digits (`font-weight: 800`) alongside user notes in a single, numerically sorted sequence (`1, 2, 3, 4...`).
+
+### Digging Strategies for Negative Candidate Puzzles
+Under `⚙️ Advanced Removal & Strategy Options` in the puzzle generator modal:
+1. **Negative Hint Reduction (Focused)** (`negative_hint_dig`): Concentrates hint removals using candidate entropy weighting to create deep logic pockets.
+2. **Negative Hint Reduction (Spread-Out)** (`negative_hint_spread`): Applies a quadratic penalty to cell repetition, spreading partial negative hints uniformly across the entire grid to maximize interactive logic.
+
+### Preset Puzzle
+- **Negative Candidate Shi-Doku (2x2)** (`negative-hint-2d.json`): A minimal, max-removal 4x4 Shi-Doku puzzle built entirely with spread-out pre-filled negative hints. Every cell on the grid contains pre-set negative hints without traditional given numbers, delivering a dense logic challenge!
 
 ## Generalization Logic
 
