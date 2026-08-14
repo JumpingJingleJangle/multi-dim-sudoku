@@ -6,7 +6,7 @@ A web application for playing generalizations of Sudoku allowing for 3d puzzles 
 
 - **Multi-Dimensional Grid Support**:
   - **2D Sudoku**: Classic 9x9 (Base 3), Shi-Doku 4x4 (Base 2), and Hexadecimal 16x16 (Base 4).
-  - **3D Hyper-Grids**: 3D Sudoku hyper-cubes with 3D constraint propagation across orthogonal planes and sub-boxes.
+  - **3D Cube Grids**: 3D Sudoku cubes with 3D constraint propagation across orthogonal planes and sub-boxes.
 - **3D Navigation**:
   - **Plane Pivot Controls**: View grid projections along **XY**, **XZ**, and **YZ** axes.
   - **Layer Shift**: Navigate forward and backward through layers.
