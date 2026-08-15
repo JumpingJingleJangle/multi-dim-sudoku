@@ -11,6 +11,39 @@
     }
   },
   {
+    "id": "negative-hint-9x9",
+    "filename": "negative-hint-9x9.json",
+    "metadata": {
+      "name": "Negative Candidate Classic (9x9)",
+      "difficulty": "Max",
+      "base": 3,
+      "dimension": 2,
+      "author": "Spread Negative Hint Engine"
+    }
+  },
+  {
+    "id": "negative-hint-3d",
+    "filename": "negative-hint-3d.json",
+    "metadata": {
+      "name": "Negative Candidate 3D (8x8x8)",
+      "difficulty": "Max",
+      "base": 2,
+      "dimension": 3,
+      "author": "Spread Negative Hint Engine"
+    }
+  },
+  {
+    "id": "negative-hint-16x16",
+    "filename": "negative-hint-16x16.json",
+    "metadata": {
+      "name": "Negative Candidate Hex (16x16)",
+      "difficulty": "Max",
+      "base": 4,
+      "dimension": 2,
+      "author": "Spread Negative Hint Engine"
+    }
+  },
+  {
     "id": "base2-3d-test",
     "filename": "base2-3d-test.json",
     "metadata": {

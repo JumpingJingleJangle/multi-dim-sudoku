@@ -17,7 +17,7 @@ A web application for playing generalizations of Sudoku allowing for 3d puzzles 
 
 ## Negative Candidate / Elimination Sudoku Variant
 
-In traditional Sudoku, puzzle construction provides **positive clues** (given numbers specifying what a cell *must* contain). 
+In traditional Sudoku, puzzle construction provides **positive clues** (given numbers specifying what a cell does contain). 
 
 In **Negative Candidate (or Elimination) Sudoku**, puzzle construction operates in negative space:
 - Puzzles are initialized with **pre-filled negative hints** (red notes) indicating values that a cell **cannot** contain.
@@ -30,8 +30,12 @@ Under `⚙️ Advanced Removal & Strategy Options` in the puzzle generator modal
 1. **Negative Hint Reduction (Focused)** (`negative_hint_dig`): Concentrates hint removals using candidate entropy weighting to create deep logic pockets.
 2. **Negative Hint Reduction (Spread-Out)** (`negative_hint_spread`): Applies a quadratic penalty to cell repetition, spreading partial negative hints uniformly across the entire grid to maximize interactive logic.
 
-### Preset Puzzle
-- **Negative Candidate Shi-Doku (2x2)** (`negative-hint-2d.json`): A minimal, max-removal 4x4 Shi-Doku puzzle built entirely with spread-out pre-filled negative hints. Every cell on the grid contains pre-set negative hints without traditional given numbers, delivering a dense logic challenge!
+### Pre-Built Negative Candidate Presets
+The app includes pre-built Max Removal Spread-Out Negative Candidate presets across all grid formats:
+- **Negative Candidate Shi-Doku (2x2)** (`negative-hint-2d.json`): Minimal 4x4 Shi-Doku grid built with spread-out negative hints.
+- **Negative Candidate Classic (9x9)** (`negative-hint-9x9.json`): Classic 9x9 Sudoku grid with spread-out negative candidate hints.
+- **Negative Candidate 3D (8x8x8)** (`negative-hint-3d.json`): 3D hyper-grid cube ($8 \times 8 \times 8 = 512$ cells) initialized with spread-out negative hints.
+- **Negative Candidate Hex (16x16)** (`negative-hint-16x16.json`): Hexadecimal $16 \times 16$ grid initialized with spread-out negative candidate hints ($0\dots\text{F}$).
 
 ## Generalization Logic
 

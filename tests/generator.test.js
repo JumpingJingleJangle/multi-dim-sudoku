@@ -146,4 +146,42 @@ describe('In-Browser Generator Engine Tests', () => {
         const res = solver.solve();
         assert.strictEqual(res.solvable, true, 'Spread-out negative hint puzzle MUST be uniquely solvable');
     });
+
+    test('Partial Digging Progress Callback (onProgress) Single-UUID Per Run', () => {
+        const fullPuzzle = generateFullPuzzle(2, 2);
+        let progressCallCount = 0;
+        let filenamesSeen = new Set();
+        let jobUuidsSeen = new Set();
+
+        const playable = processDigging(fullPuzzle, {
+            strategy: 'negative_hint_spread',
+            removals: 3,
+            snapshotIntervalMs: 0,
+            onProgress: (partialPuzzle, stats) => {
+                progressCallCount++;
+                assert.ok(stats.cachedFilename);
+                assert.ok(stats.jobUuid);
+                filenamesSeen.add(stats.cachedFilename);
+                jobUuidsSeen.add(stats.jobUuid);
+                assert.strictEqual(partialPuzzle.metadata.cached_filename, stats.cachedFilename);
+                assert.strictEqual(partialPuzzle.metadata.job_uuid, stats.jobUuid);
+            }
+        });
+        assert.ok(progressCallCount > 0, 'onProgress callback should be invoked during hint peeling');
+        assert.strictEqual(filenamesSeen.size, 1, 'All snapshots within a single digging run MUST share 1 cached filename');
+        assert.strictEqual(jobUuidsSeen.size, 1, 'All snapshots within a single digging run MUST share 1 job UUID');
+
+        // Test a second run to verify a distinct UUID is assigned
+        let secondRunFilenames = new Set();
+        processDigging(fullPuzzle, {
+            strategy: 'negative_hint_spread',
+            removals: 3,
+            snapshotIntervalMs: 0,
+            onProgress: (partialPuzzle, stats) => {
+                secondRunFilenames.add(stats.cachedFilename);
+            }
+        });
+        assert.strictEqual(secondRunFilenames.size, 1);
+        assert.notStrictEqual(Array.from(filenamesSeen)[0], Array.from(secondRunFilenames)[0], 'Different digging runs MUST generate distinct cached filenames');
+    });
 });

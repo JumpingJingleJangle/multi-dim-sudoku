@@ -384,8 +384,75 @@ export function canSolveWithSinglesOnly(stateMap, base, dim, redNotationsMap = n
             }
         }
     }
-
     return emptySet.size === 0;
+}
+
+export function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID().split('-')[0];
+    }
+    return Math.random().toString(36).substring(2, 10);
+}
+
+export function getCachedPuzzleFilename(baseName = 'puzzle', uuid = null) {
+    let cleanName = String(baseName).replace(/^cached-puzzle-/, '').replace(/\.json$/, '').replace(/-cached-[a-z0-9]+$/, '');
+    let runUuid = uuid || generateUUID();
+    return `cached-puzzle-${cleanName}-${runUuid}.json`;
+}
+
+export function buildPlayablePuzzleObject(masterMap, redNotationsMap, base, dim, n, options = {}) {
+    let playableInitial = [];
+    masterMap.forEach((masterVal, key) => {
+        let hints = redNotationsMap.get(key);
+        let parts = key.split(',').map(Number);
+        let cellObj = {};
+        if (dim === 2) { cellObj.y = parts[0]; cellObj.x = parts[1]; }
+        else if (dim === 3) { cellObj.z = parts[0]; cellObj.y = parts[1]; cellObj.x = parts[2]; }
+
+        if (hints && hints.size === n - 1) {
+            cellObj.value = masterVal;
+            playableInitial.push(cellObj);
+        } else if (hints && hints.size > 0) {
+            cellObj.notations = { red: Array.from(hints) };
+            playableInitial.push(cellObj);
+        }
+    });
+
+    const puzzleName = options.name || `${dim}D Base ${base} Negative Hint Dig Puzzle`;
+    const puzzleId = options.id || `hint-dig-${Math.random().toString(36).substring(2, 10)}`;
+
+    return {
+        id: puzzleId,
+        metadata: {
+            id: puzzleId,
+            name: puzzleName,
+            base: base,
+            dimension: dim,
+            difficulty: options.difficulty || "Negative Hint Dig",
+            strategy: options.strategy || "negative_hint_dig",
+            author: options.author || "In-Browser JS Engine"
+        },
+        initial_state: playableInitial
+    };
+}
+
+export function buildCachedPuzzleObject(masterMap, redNotationsMap, base, dim, n, options = {}, runUuid = null) {
+    let puzzle = buildPlayablePuzzleObject(masterMap, redNotationsMap, base, dim, n, options);
+    let uuid = runUuid || options.jobUuid || generateUUID();
+    let baseId = options.id || options.name || `puzzle-${dim}d-${base}b`;
+    let cleanBaseId = String(baseId).replace(/^cached-puzzle-/, '').replace(/\.json$/, '').replace(/-cached-[a-z0-9]+$/, '');
+    
+    let cachedId = `cached-puzzle-${cleanBaseId}-${uuid}`;
+    let cachedFilename = getCachedPuzzleFilename(cleanBaseId, uuid);
+
+    puzzle.id = cachedId;
+    puzzle.metadata.id = cachedId;
+    puzzle.metadata.is_cached = true;
+    puzzle.metadata.cached_at = new Date().toISOString();
+    puzzle.metadata.cached_filename = cachedFilename;
+    puzzle.metadata.job_uuid = uuid;
+    
+    return puzzle;
 }
 
 export function processDiggingByNegativeHintReduction(fullPuzzle, options = {}) {
@@ -450,8 +517,16 @@ export function processDiggingByNegativeHintReduction(fullPuzzle, options = {}) 
     let targetRemovals = isMaxMode ? (dim === 3 ? 512 * (n - 1) : (n * n * (n - 1))) : (options.removals !== undefined ? options.removals : (dim === 3 ? 120 : (n === 4 ? 8 : 40)));
     let minHintsPerDugCell = options.minRedHints !== undefined ? options.minRedHints : 1;
 
+    const runUuid = options.jobUuid || generateUUID();
     let removedHintCount = 0;
+    let totalEvaluations = 0;
     let lockedHints = new Set();
+    let isVerbose = options.verbose === true;
+    let logInterval = options.logIntervalMs !== undefined ? options.logIntervalMs : 60000; // Default 1 minute
+    let snapshotInterval = options.snapshotIntervalMs !== undefined ? options.snapshotIntervalMs : logInterval; // Default matches logInterval (1 minute)
+    let startTime = Date.now();
+    let lastLogTime = startTime;
+    let lastSnapshotTime = startTime;
 
     while (removedHintCount < targetRemovals) {
         let availablePairs = [];
@@ -483,6 +558,7 @@ export function processDiggingByNegativeHintReduction(fullPuzzle, options = {}) 
         let hintVal = selectedPair.hintVal;
 
         redNotationsMap.get(cellKey).delete(hintVal);
+        totalEvaluations++;
 
         let stateMap = new Map();
         masterMap.forEach((masterVal, key) => {
@@ -494,10 +570,16 @@ export function processDiggingByNegativeHintReduction(fullPuzzle, options = {}) 
             }
         });
 
-        let solver = new ConstraintSolver(stateMap, base, dim, redNotationsMap);
-        let res = solver.solve();
+        let isSolvable = false;
+        if (canSolveWithSinglesOnly(stateMap, base, dim, redNotationsMap)) {
+            isSolvable = true;
+        } else {
+            let solver = new ConstraintSolver(stateMap, base, dim, redNotationsMap);
+            let res = solver.solve();
+            isSolvable = res.solvable;
+        }
 
-        if (!res.solvable) {
+        if (!isSolvable) {
             redNotationsMap.get(cellKey).add(hintVal);
             lockedHints.add(selectedPair.pairId);
         } else {
@@ -506,41 +588,32 @@ export function processDiggingByNegativeHintReduction(fullPuzzle, options = {}) 
                 break;
             }
         }
+
+        let remainingPoolCount = availablePairs.length - 1;
+        let now = Date.now();
+        if (isVerbose && (now - lastLogTime >= logInterval)) {
+            let elapsedSec = ((now - startTime) / 1000).toFixed(1);
+            console.log(`[Generator Progress ${elapsedSec}s] Evaluated: ${totalEvaluations} candidates | Peeled: ${removedHintCount} red hints | Locked: ${lockedHints.size} | Remaining candidate pool: ${remainingPoolCount}`);
+            lastLogTime = now;
+        }
+
+        if (typeof options.onProgress === 'function' && (now - lastSnapshotTime >= snapshotInterval)) {
+            const partialPuzzle = buildCachedPuzzleObject(masterMap, redNotationsMap, base, dim, n, options, runUuid);
+            options.onProgress(partialPuzzle, {
+                removedHintCount,
+                lockedHintsCount: lockedHints.size,
+                candidatePoolSize: remainingPoolCount,
+                totalEvaluations,
+                jobUuid: runUuid,
+                cachedFilename: partialPuzzle.metadata.cached_filename
+            });
+            lastSnapshotTime = now;
+        }
     }
 
-    let playableInitial = [];
-    masterMap.forEach((masterVal, key) => {
-        let hints = redNotationsMap.get(key);
-        let parts = key.split(',').map(Number);
-        let cellObj = {};
-        if (dim === 2) { cellObj.y = parts[0]; cellObj.x = parts[1]; }
-        else if (dim === 3) { cellObj.z = parts[0]; cellObj.y = parts[1]; cellObj.x = parts[2]; }
-
-        if (hints.size === n - 1) {
-            cellObj.value = masterVal;
-            playableInitial.push(cellObj);
-        } else if (hints.size > 0) {
-            cellObj.notations = { red: Array.from(hints) };
-            playableInitial.push(cellObj);
-        }
-    });
-
-    const puzzleName = options.name || `${dim}D Base ${base} Negative Hint Dig Puzzle`;
-    const puzzleId = `hint-dig-${Math.random().toString(36).substring(2, 10)}`;
-
-    return {
-        id: puzzleId,
-        metadata: {
-            name: puzzleName,
-            base: base,
-            dimension: dim,
-            difficulty: options.difficulty || "Negative Hint Dig",
-            strategy: options.strategy || "negative_hint_dig",
-            author: "In-Browser JS Engine"
-        },
-        initial_state: playableInitial,
-        master_solution: fullPuzzle.initial_state
-    };
+    let result = buildPlayablePuzzleObject(masterMap, redNotationsMap, base, dim, n, options);
+    result.master_solution = fullPuzzle.initial_state;
+    return result;
 }
 
 export function processDigging(fullPuzzle, options = {}) {
@@ -573,6 +646,14 @@ export function processDigging(fullPuzzle, options = {}) {
     let consecutiveFailures = 0;
     const maxFailures = dim === 3 ? 30 : 25;
     let potentialCoords = [...keys];
+
+    const runUuid = options.jobUuid || generateUUID();
+    let isVerbose = options.verbose === true;
+    let logInterval = options.logIntervalMs !== undefined ? options.logIntervalMs : 60000;
+    let snapshotInterval = options.snapshotIntervalMs !== undefined ? options.snapshotIntervalMs : logInterval;
+    let startTime = Date.now();
+    let lastLogTime = startTime;
+    let lastSnapshotTime = startTime;
 
     while (potentialCoords.length > 0 && removedCount < targetRemovals) {
         let power = strategy === 'tight' ? 2 : 1;
@@ -653,6 +734,49 @@ export function processDigging(fullPuzzle, options = {}) {
                 break;
             }
         }
+
+        let now = Date.now();
+        if (isVerbose && (now - lastLogTime >= logInterval)) {
+            let elapsedSec = ((now - startTime) / 1000).toFixed(1);
+            console.log(`[Clue Digging Progress ${elapsedSec}s] Dug ${removedCount} clues (Remaining candidates: ${potentialCoords.length})...`);
+            lastLogTime = now;
+        }
+
+        if (typeof options.onProgress === 'function' && (now - lastSnapshotTime >= snapshotInterval)) {
+            let baseId = options.id || options.name || `puzzle-${dim}d-${base}b`;
+            let cleanBaseId = String(baseId).replace(/^cached-puzzle-/, '').replace(/\.json$/, '').replace(/-cached-[a-z0-9]+$/, '');
+            let cachedId = `cached-puzzle-${cleanBaseId}-${runUuid}`;
+            let cachedFilename = getCachedPuzzleFilename(cleanBaseId, runUuid);
+
+            let partialPlayableInitial = [];
+            stateMap.forEach((val, key) => {
+                if (val !== null && val !== undefined) {
+                    let parts = key.split(',').map(Number);
+                    let cellObj = { value: val };
+                    if (dim === 2) { cellObj.y = parts[0]; cellObj.x = parts[1]; }
+                    else if (dim === 3) { cellObj.z = parts[0]; cellObj.y = parts[1]; cellObj.x = parts[2]; }
+                    partialPlayableInitial.push(cellObj);
+                }
+            });
+            const partialPuzzle = {
+                id: cachedId,
+                metadata: {
+                    id: cachedId,
+                    name: options.name || `${dim}D Base ${base} Custom Puzzle`,
+                    base, dimension: dim,
+                    difficulty: options.difficulty || "Custom Generated",
+                    strategy: strategy, author: "In-Browser JS Engine",
+                    is_cached: true,
+                    cached_at: new Date().toISOString(),
+                    cached_filename: cachedFilename,
+                    job_uuid: runUuid
+                },
+                initial_state: partialPlayableInitial,
+                master_solution: fullPuzzle.initial_state
+            };
+            options.onProgress(partialPuzzle, { removedCount, candidatePoolSize: potentialCoords.length, jobUuid: runUuid, cachedFilename });
+            lastSnapshotTime = now;
+        }
     }
 
     let playableInitial = [];
@@ -687,8 +811,8 @@ export function processDigging(fullPuzzle, options = {}) {
 /**
  * Unified entry point for generating puzzles synchronously.
  */
-export function generatePuzzle(params = {}, statusCallback = null) {
-    const { base = 3, dim = 2, name, removals, strategy, difficulty } = params;
+export function generatePuzzle(params = {}, statusCallback = null, progressCallback = null) {
+    const { base = 3, dim = 2, name, removals, strategy, difficulty, verbose, logIntervalMs, onProgress } = params;
 
     if (statusCallback) statusCallback('Generating solution matrix...');
     let fullPuzzle = generateFullPuzzle(base, dim);
@@ -697,7 +821,10 @@ export function generatePuzzle(params = {}, statusCallback = null) {
     }
 
     if (statusCallback) statusCallback('Digging clues for playable puzzle...');
-    let playablePuzzle = processDigging(fullPuzzle, { strategy, difficulty, name, removals });
+    let playablePuzzle = processDigging(fullPuzzle, {
+        strategy, difficulty, name, removals, verbose, logIntervalMs,
+        onProgress: onProgress || progressCallback
+    });
 
     return playablePuzzle;
 }
